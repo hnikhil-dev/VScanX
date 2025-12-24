@@ -20,11 +20,19 @@ jobs:
       - name: Build distributions
         run: |
           python -m build
+      - name: Prepare release notes
+        id: release_notes
+        run: |
+          body=$(cat CHANGELOG.md || true)
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$body" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
       - name: Create GitHub Release and upload artifacts
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
+          body: ${{ steps.release_notes.outputs.body }}
           files: dist/*
       # Optional: publish to PyPI (uncomment and set PYPI_API_TOKEN secret)
       # - name: Publish to PyPI
