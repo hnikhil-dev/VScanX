@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .meta-info {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .meta-value {
+            font-size: 1.1em;
+            color: #212529;
+            margin-top: 5px;
+        }
+
+        .summary {
+            padding: 30px;
+            background: white;
+        }
+
+        .summary h2 {
+            color: #495057;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .severity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .severity-card {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .severity-card.critical {
+            background: #dc3545;
+            color: white;
+        }
+
+        .severity-card.high {
+            background: #fd7e14;
+            color: white;
+        }
+
+        .severity-card.medium {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .severity-card.low {
+            background: #20c997;
+            color: white;
+        }
+
+        .severity-card.info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .severity-count {
+            font-size: 2.5em;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .severity-label {
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .modules {
+            padding: 30px;
+        }
+
+        .module {
+            margin-bottom: 30px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .module-header {
+            background: #495057;
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .module-content {
+            padding: 20px;
+        }
+
+        .finding {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .finding.CRITICAL {
+            border-left-color: #dc3545;
+        }
+
+        .finding.HIGH {
+            border-left-color: #fd7e14;
+        }
+
+        .finding.MEDIUM {
+            border-left-color: #ffc107;
+        }
+
+        .finding.LOW {
+            border-left-color: #20c997;
+        }
+
+        .finding.INFO {
+            border-left-color: #17a2b8;
+        }
+
+        .finding-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .finding-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: #212529;
+        }
+
+        .finding-severity {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: white;
+        }
+
+        .finding-severity.CRITICAL {
+            background: #dc3545;
+        }
+
+        .finding-severity.HIGH {
+            background: #fd7e14;
+        }
+
+        .finding-severity.MEDIUM {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .finding-severity.LOW {
+            background: #20c997;
+        }
+
+        .finding-severity.INFO {
+            background: #17a2b8;
+        }
+
+        .finding-details {
+            color: #6c757d;
+            margin-top: 10px;
+            line-height: 1.6;
+        }
+
+        .finding-details p {
+            margin: 6px 0;
+            font-size: 0.95em;
+        }
+
+        .finding-details p strong {
+            color: #495057;
+            display: inline-block;
+            width: 80px;
+        }
+
+        .finding-details code {
+            background: #F0F0F0;
+            padding: 8px;
+            display: block;
+            border-radius: 4px;
+            margin-top: 5px;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Monaco', 'Courier New', monospace;
+            max-height: 220px;
+            overflow: auto;
+        }
+
+        .finding-details code.inline {
+            display: inline-block;
+            padding: 2px 6px;
+            margin-top: 0;
+        }
+
+        .no-findings {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c2c7;
+            color: #842029;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>{{ title }}</h1>
+            <div class="subtitle">Security Vulnerability Assessment</div>
+        </div>
+
+        <!-- Meta Information -->
+        <div class="meta-info">
+            <div class="meta-grid">
+                <div class="meta-item">
+                    <span class="meta-label">Target</span>
+                    <span class="meta-value">{{ results.target }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Scan Type</span>
+                    <span class="meta-value">{{ results.scan_type|upper }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Timestamp</span>
+                    <span class="meta-value">{{ results.timestamp }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Duration</span>
+                    <span class="meta-value">{{ results.duration }}s</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary">
+            <h2>Summary</h2>
+            <div class="severity-grid">
+                <div class="severity-card critical">
+                    <span class="severity-count">{{ summary.by_severity.CRITICAL }}</span>
+                    <span class="severity-label">Critical</span>
+                </div>
+                <div class="severity-card high">
+                    <span class="severity-count">{{ summary.by_severity.HIGH }}</span>
+                    <span class="severity-label">High</span>
+                </div>
+                <div class="severity-card medium">
+                    <span class="severity-count">{{ summary.by_severity.MEDIUM }}</span>
+                    <span class="severity-label">Medium</span>
+                </div>
+                <div class="severity-card low">
+                    <span class="severity-count">{{ summary.by_severity.LOW }}</span>
+                    <span class="severity-label">Low</span>
+                </div>
+                <div class="severity-card info">
+                    <span class="severity-count">{{ summary.by_severity.INFO }}</span>
+                    <span class="severity-label">Info</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modules & Findings -->
+        <div class="modules">
+            <h2 style="color: #495057; margin-bottom: 20px; border-bottom: 3px solid #667eea; padding-bottom: 10px;">
+                Detailed Findings</h2>
+
+            {% for module in results.modules %}
+            <div class="module">
+                <div class="module-header">
+                    {{ module.module }}
+                </div>
+                <div class="module-content">
+                    {% if module.error %}
+                    <div class="error">
+                        <strong>Error:</strong> {{ module.error }}
+                    </div>
+                    {% elif module.findings %}
+                    {% for finding in module.findings %}
+                    <div class="finding {{ finding.severity }}">
+                        <div class="finding-header">
+                            <span class="finding-title">{{ finding.finding | e }}</span>
+                            <span class="finding-severity {{ finding.severity }}">{{ finding.severity }}</span>
+                        </div>
+
+                        <div class="finding-details">
+                            <p><strong>Details:</strong> {{ finding.details | default('N/A') | e }}</p>
+                            <p><strong>Parameter:</strong> <code
+                                    class="inline">{{ finding.parameter | default('') | e }}</code></p>
+                            <p><strong>Evidence:</strong>
+                                <code
+                                    style="background: #F0F0F0; padding: 8px; display: block; border-radius: 3px; margin-top: 5px; font-size: 0.9em;">{{ finding.evidence | default('N/A') | e }}</code>
+                            </p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="no-findings">No findings detected by this module</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            Generated by VScanX on {{ generation_time }}<br>
+            This report is confidential and should be handled according to your organization's security policies.
+        </div>
+    </div>
+</body>
+
+</html>

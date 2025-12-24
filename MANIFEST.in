@@ -1,0 +1,14 @@
+include README.md
+include LICENSE
+include LICENCE
+include CHANGELOG.md
+include SECURITY.md
+include CONTRIBUTING.md
+include CODE_OF_CONDUCT.md
+include INSTALL.md
+include requirements.txt
+recursive-include reporting/templates *.html
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .git*
+

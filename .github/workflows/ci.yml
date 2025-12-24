@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff pytest pytest-cov
+          # Install package in editable mode so tests can import project packages
+          pip install -e .
+      - name: Lint
+        run: |
+          ruff check .
+      - name: Security scan
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit
+          # Run Bandit only against project packages to avoid noise from venv and tests
+          bandit -r core modules reporting -q --exclude tests,modules/tests
+      - name: Check for stray prints in modules
+        run: |
+          python - <<'PY'
+          import sys, pathlib, re
+          root = pathlib.Path(".")
+          bad = []
+          for path in root.glob("modules/**/*.py"):
+              if path.name.startswith("__init__"):
+                  continue
+              text = path.read_text(encoding="utf-8", errors="ignore")
+              for i, line in enumerate(text.splitlines(), 1):
+                  if re.search(r"\bprint\s*\(", line):
+                      bad.append(f"{path}:{i}:{line.strip()}")
+          if bad:
+              print("Found print() usage in modules:")
+              for b in bad:
+                  print(b)
+              sys.exit(1)
+          PY
+      - name: Tests
+        run: |
+          pytest --maxfail=1 --disable-warnings --cov=./ --cov-report=term-missing
