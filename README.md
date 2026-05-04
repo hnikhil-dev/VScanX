@@ -36,6 +36,17 @@ You must have explicit written permission to scan any target system. Unauthorize
 
 The developers assume NO liability for misuse of this tool. See [LEGAL.md](LEGAL.md) for complete terms.
 
+## 🎯 Why I Built This
+
+Most beginners rely on tools without understanding how vulnerabilities are detected.
+
+I built VScanX to explore:
+- How scanners actually identify vulnerabilities
+- The limitations of automated detection
+- How real-world edge cases affect scanning accuracy
+
+This project focuses on understanding detection logic, not just using tools.
+
 ## 🎯 Features
 
 ### What it does today
@@ -51,6 +62,13 @@ The developers assume NO liability for misuse of this tool. See [LEGAL.md](LEGAL
 - Service fingerprinting
 - Plugin loader (dynamic module discovery)
 - Packaging & distribution (PyPI/installer)
+
+## 🧠 Key Learnings
+
+- Automated scanners cannot replace manual analysis
+- Many vulnerabilities require context-aware detection
+- False positives and edge cases are major challenges
+- Security tools are only as good as the logic behind them
 
 ## 🧪 Testing & CI/CD
 
