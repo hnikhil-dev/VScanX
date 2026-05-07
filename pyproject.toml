@@ -48,10 +48,10 @@ pdf = [
 vscanx = "vscanx:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/vscanx"
-Documentation = "https://github.com/yourusername/vscanx/blob/main/README.md"
-Repository = "https://github.com/yourusername/vscanx"
-Issues = "https://github.com/yourusername/vscanx/issues"
+Homepage = "https://github.com/hnikhil-dev/VScanX"
+Documentation = "https://github.com/hnikhil-dev/VScanX/blob/main/README.md"
+Repository = "https://github.com/hnikhil-dev/VScanX"
+Issues = "https://github.com/hnikhil-dev/VScanX/issues"
 
 [tool.ruff]
 line-length = 100
