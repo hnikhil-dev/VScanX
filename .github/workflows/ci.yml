@@ -34,6 +34,7 @@ jobs:
           # Run Bandit only against project packages to avoid noise from venv and tests
           bandit -r core modules reporting -q --exclude tests,modules/tests
       - name: Check for stray prints in modules
+        shell: bash
         run: |
           python - <<'PY'
           import sys, pathlib, re
