@@ -29,4 +29,3 @@ class ScanStateStore:
         p = base / f"{key}.json"
         p.write_text(json.dumps(data, indent=2), encoding="utf-8")
         return str(p)
-

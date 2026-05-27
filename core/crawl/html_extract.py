@@ -29,9 +29,7 @@ class _Extractor(HTMLParser):
             itype = (attr.get("type") or "text").lower()
             value = attr.get("value", "")
             if name:
-                self._active_form["inputs"].append(
-                    {"name": name, "type": itype, "value": value}
-                )
+                self._active_form["inputs"].append({"name": name, "type": itype, "value": value})
 
     def handle_endtag(self, tag: str):
         if tag.lower() == "form" and self._active_form is not None:
@@ -47,4 +45,3 @@ def extract_from_html(html: str) -> Dict[str, List]:
         # tolerate broken HTML
         pass
     return {"links": p.links, "scripts": p.scripts, "forms": p.forms}
-

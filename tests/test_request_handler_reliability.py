@@ -19,4 +19,3 @@ def test_request_handler_stats_shape():
     assert "requests_total" in s  # nosec: B101
     assert "latency_ms_avg" in s  # nosec: B101
     assert s.get("max_response_bytes") is not None  # nosec: B101
-

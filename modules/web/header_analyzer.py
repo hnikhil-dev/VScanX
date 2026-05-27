@@ -29,32 +29,21 @@ class HeaderAnalyzer(BaseModule):
         # Header remediation mapping
         self.remediation_map = {
             "Strict-Transport-Security": (
-                'Add "Strict-Transport-Security: max-age=31536000; '
-                'includeSubDomains" header to enforce HTTPS'
+                'Add "Strict-Transport-Security: max-age=31536000; ' 'includeSubDomains" header to enforce HTTPS'
             ),
             "Content-Security-Policy": (
                 "Implement Content-Security-Policy header to restrict resource "
                 "origins and prevent XSS/injection attacks"
             ),
-            "X-Frame-Options": (
-                'Add "X-Frame-Options: DENY" or "SAMEORIGIN" to prevent '
-                'clickjacking attacks'
-            ),
+            "X-Frame-Options": ('Add "X-Frame-Options: DENY" or "SAMEORIGIN" to prevent ' "clickjacking attacks"),
             "X-Content-Type-Options": (
-                'Add "X-Content-Type-Options: nosniff" to prevent MIME-type '
-                'sniffing attacks'
+                'Add "X-Content-Type-Options: nosniff" to prevent MIME-type ' "sniffing attacks"
             ),
-            "X-XSS-Protection": (
-                'Add "X-XSS-Protection: 1; mode=block" for legacy browser '
-                'XSS protection'
-            ),
+            "X-XSS-Protection": ('Add "X-XSS-Protection: 1; mode=block" for legacy browser ' "XSS protection"),
             "Referrer-Policy": (
-                'Add "Referrer-Policy: strict-origin-when-cross-origin" to '
-                'control referrer leakage'
+                'Add "Referrer-Policy: strict-origin-when-cross-origin" to ' "control referrer leakage"
             ),
-            "Permissions-Policy": (
-                "Implement Permissions-Policy to restrict sensitive browser features"
-            ),
+            "Permissions-Policy": ("Implement Permissions-Policy to restrict sensitive browser features"),
         }
         self._recommended = {
             "Strict-Transport-Security": {"min_max_age": 15552000},  # 180 days
@@ -113,9 +102,7 @@ class HeaderAnalyzer(BaseModule):
             else:
                 missing_headers.append(header)
                 severity = self._get_missing_severity(header)
-                remediation = self.remediation_map.get(
-                    header, "Configure this security header"
-                )
+                remediation = self.remediation_map.get(header, "Configure this security header")
                 self.add_result(
                     severity=severity,
                     finding=f"Missing security header: {header}",
@@ -150,9 +137,7 @@ class HeaderAnalyzer(BaseModule):
             "findings": self.get_results(),
         }
 
-    async def run_async(
-        self, target: str, verbose: bool = False, **kwargs
-    ) -> Dict[str, Any]:
+    async def run_async(self, target: str, verbose: bool = False, **kwargs) -> Dict[str, Any]:
         """Async header analysis path."""
         self.clear_results()
         self.verbose = verbose
@@ -180,9 +165,7 @@ class HeaderAnalyzer(BaseModule):
                     severity=self._get_missing_severity(header),
                     finding=f"Missing security header: {header}",
                     details=self._get_header_description(header),
-                    remediation=self.remediation_map.get(
-                        header, "Configure this security header"
-                    ),
+                    remediation=self.remediation_map.get(header, "Configure this security header"),
                 )
         self._analyze_quality(dict(headers))
         return {

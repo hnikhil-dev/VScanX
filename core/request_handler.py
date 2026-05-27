@@ -7,8 +7,6 @@ import asyncio
 import json
 import logging
 import os
-
-logger = logging.getLogger("vscanx.request_handler")
 import random
 import re
 import time
@@ -16,6 +14,8 @@ from typing import Dict, Optional
 from urllib.parse import urlparse
 
 import httpx
+
+logger = logging.getLogger("vscanx.request_handler")
 
 # Rate limiting configuration
 DEFAULT_DELAY = 1.0  # seconds between requests
@@ -146,9 +146,7 @@ class RequestHandler:
     def _redact_headers(self, headers: Dict[str, str]) -> Dict[str, str]:
         """Return a redacted copy of headers for safe logging/export."""
         sensitive = {"authorization", "cookie", "set-cookie", "x-api-key"}
-        return {
-            k: "<redacted>" if k.lower() in sensitive else v for k, v in headers.items()
-        }
+        return {k: "<redacted>" if k.lower() in sensitive else v for k, v in headers.items()}
 
     def _redact_payload(self, payload: Dict[str, str]) -> Dict[str, str]:
         """Redact common secret keys in body/query for debug capture."""
@@ -162,10 +160,7 @@ class RequestHandler:
             "auth",
             "authorization",
         }
-        return {
-            k: "<redacted>" if k.lower() in secret_keys else v
-            for k, v in payload.items()
-        }
+        return {k: "<redacted>" if k.lower() in secret_keys else v for k, v in payload.items()}
 
     def get_last_debug_capture(self) -> Dict[str, str]:
         """Return last captured request/response metadata (redacted)."""
@@ -225,9 +220,7 @@ class RequestHandler:
                     print("[!] Authentication uncertain - no cookies received")
                     return False
             else:
-                print(
-                    f"[!] Authentication failed - status code: {response.status_code}"
-                )
+                print(f"[!] Authentication failed - status code: {response.status_code}")
                 return False
 
         except Exception as e:
@@ -350,15 +343,11 @@ class RequestHandler:
     def _update_adaptive_delay(self, latency_seconds: float) -> None:
         """Adjust delay based on observed response latency."""
         alpha = 0.2
-        self._latency_ema = (
-            alpha * max(0.001, latency_seconds) + (1 - alpha) * self._latency_ema
-        )
+        self._latency_ema = alpha * max(0.001, latency_seconds) + (1 - alpha) * self._latency_ema
         suggested = min(MAX_DELAY, max(MIN_DELAY, self._latency_ema * 0.35))
         self._adaptive_delay = suggested
 
-    def get(
-        self, url: str, params: Dict = None, **kwargs
-    ) -> Optional[httpx.Response]:
+    def get(self, url: str, params: Dict = None, **kwargs) -> Optional[httpx.Response]:
         """
         Safe GET request with authentication support
 
@@ -392,13 +381,9 @@ class RequestHandler:
                         "method": "GET",
                         "url": url,
                         "params": json.dumps(self._redact_payload(params or {})),
-                        "request_headers": json.dumps(
-                            self._redact_headers(dict(self.session.headers))
-                        ),
+                        "request_headers": json.dumps(self._redact_headers(dict(self.session.headers))),
                         "status_code": str(response.status_code),
-                        "response_headers": json.dumps(
-                            self._redact_headers(dict(response.headers))
-                        ),
+                        "response_headers": json.dumps(self._redact_headers(dict(response.headers))),
                     }
                 self._stats["requests_ok"] += 1
                 return response
@@ -422,9 +407,7 @@ class RequestHandler:
 
         return None
 
-    def post(
-        self, url: str, data: Dict = None, json_data: Dict = None, **kwargs
-    ) -> Optional[httpx.Response]:
+    def post(self, url: str, data: Dict = None, json_data: Dict = None, **kwargs) -> Optional[httpx.Response]:
         """
         Safe POST request with authentication support
 
@@ -461,13 +444,9 @@ class RequestHandler:
                         "url": url,
                         "data": json.dumps(self._redact_payload(data or {})),
                         "json": json.dumps(self._redact_payload(json_data or {})),
-                        "request_headers": json.dumps(
-                            self._redact_headers(dict(self.session.headers))
-                        ),
+                        "request_headers": json.dumps(self._redact_headers(dict(self.session.headers))),
                         "status_code": str(response.status_code),
-                        "response_headers": json.dumps(
-                            self._redact_headers(dict(response.headers))
-                        ),
+                        "response_headers": json.dumps(self._redact_headers(dict(response.headers))),
                     }
                 self._stats["requests_ok"] += 1
                 return response
@@ -491,9 +470,7 @@ class RequestHandler:
 
         return None
 
-    async def async_get(
-        self, url: str, params: Dict = None, **kwargs
-    ) -> Optional[httpx.Response]:
+    async def async_get(self, url: str, params: Dict = None, **kwargs) -> Optional[httpx.Response]:
         """Async GET with retries, adaptive throttling, and debug capture."""
         if not self._consume_quota():
             return None
@@ -518,13 +495,9 @@ class RequestHandler:
                         "method": "GET",
                         "url": url,
                         "params": json.dumps(self._redact_payload(params or {})),
-                        "request_headers": json.dumps(
-                            self._redact_headers(dict(self._async_client.headers))
-                        ),
+                        "request_headers": json.dumps(self._redact_headers(dict(self._async_client.headers))),
                         "status_code": str(response.status_code),
-                        "response_headers": json.dumps(
-                            self._redact_headers(dict(response.headers))
-                        ),
+                        "response_headers": json.dumps(self._redact_headers(dict(response.headers))),
                     }
                 self._stats["requests_ok"] += 1
                 return response
@@ -577,13 +550,9 @@ class RequestHandler:
                         "url": url,
                         "data": json.dumps(self._redact_payload(data or {})),
                         "json": json.dumps(self._redact_payload(json_data or {})),
-                        "request_headers": json.dumps(
-                            self._redact_headers(dict(self._async_client.headers))
-                        ),
+                        "request_headers": json.dumps(self._redact_headers(dict(self._async_client.headers))),
                         "status_code": str(response.status_code),
-                        "response_headers": json.dumps(
-                            self._redact_headers(dict(response.headers))
-                        ),
+                        "response_headers": json.dumps(self._redact_headers(dict(response.headers))),
                     }
                 self._stats["requests_ok"] += 1
                 return response

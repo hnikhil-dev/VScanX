@@ -77,9 +77,7 @@ class XSSDetector(BaseModule):
 
         return {"module": self.name, "target": target, "findings": self.get_results()}
 
-    async def run_async(
-        self, target: str, verbose: bool = False, **kwargs
-    ) -> Dict[str, Any]:
+    async def run_async(self, target: str, verbose: bool = False, **kwargs) -> Dict[str, Any]:
         """Async execution path for high-concurrency orchestration."""
         import asyncio
 
@@ -274,9 +272,7 @@ class XSSDetector(BaseModule):
                     if context.startswith(">") and context.endswith("<"):
                         idx = html.find(context)
                         pos_after_lt = idx + len(context)
-                        next_char = (
-                            html[pos_after_lt] if pos_after_lt < len(html) else ""
-                        )
+                        next_char = html[pos_after_lt] if pos_after_lt < len(html) else ""
 
                         # If a closing tag immediately follows the '<' after payload (e.g. </div>)
                         if next_char == "/":
@@ -290,9 +286,7 @@ class XSSDetector(BaseModule):
                             continue
 
                     if self.verbose:
-                        logger.debug(
-                            "xss_dangerous_context", extra={"context": context}
-                        )
+                        logger.debug("xss_dangerous_context", extra={"context": context})
                     return True
 
         # If payload appears verbatim with script tags, it's likely vulnerable

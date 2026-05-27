@@ -35,12 +35,8 @@ def validate_before_export(results: Dict[str, Any], export_format: str) -> None:
         validate_scan_result_schema(sanitized)
         logger.debug("export_validation_passed", extra={"format": export_format})
     except Exception as e:
-        logger.error(
-            "export_validation_failed", extra={"format": export_format, "error": str(e)}
-        )
-        raise ExportValidationError(
-            f"Export validation failed for {export_format}: {e}"
-        ) from e
+        logger.error("export_validation_failed", extra={"format": export_format, "error": str(e)})
+        raise ExportValidationError(f"Export validation failed for {export_format}: {e}") from e
 
 
 def validate_json_export(data: Dict[str, Any]) -> None:
@@ -96,9 +92,7 @@ def sanitize_for_export(results: Dict[str, Any]) -> Dict[str, Any]:
 
                 if isinstance(evidence, dict):
                     text = str(evidence.get("summary", ""))
-                    text = re.sub(
-                        r"Bearer\s+[A-Za-z0-9\-_]+", "Bearer [REDACTED]", text
-                    )
+                    text = re.sub(r"Bearer\s+[A-Za-z0-9\-_]+", "Bearer [REDACTED]", text)
                     text = re.sub(
                         r"[A-Za-z0-9]{32,}",
                         lambda m: "[REDACTED]" if len(m.group()) > 32 else m.group(),
@@ -109,9 +103,7 @@ def sanitize_for_export(results: Dict[str, Any]) -> Dict[str, Any]:
                 else:
                     evidence = str(evidence)
                     # Redact bearer tokens
-                    evidence = re.sub(
-                        r"Bearer\s+[A-Za-z0-9\-_]+", "Bearer [REDACTED]", evidence
-                    )
+                    evidence = re.sub(r"Bearer\s+[A-Za-z0-9\-_]+", "Bearer [REDACTED]", evidence)
                     # Redact API keys (basic pattern)
                     evidence = re.sub(
                         r"[A-Za-z0-9]{32,}",

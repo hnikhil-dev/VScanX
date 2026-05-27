@@ -138,4 +138,3 @@ class PluginManager:
         while "__" in key:
             key = key.replace("__", "_")
         return key or "module"
-

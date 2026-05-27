@@ -3,8 +3,8 @@ VScanX Directory Enumeration Module
 Discovers hidden directories and files
 """
 
-import concurrent.futures
 import asyncio
+import concurrent.futures
 import logging
 from typing import Any, Dict
 from urllib.parse import urljoin, urlparse
@@ -28,9 +28,7 @@ class DirectoryEnumerator(BaseModule):
     def __init__(self, max_threads: int = 5, handler=None):
         super().__init__()
         self.name = "Directory Enumerator"
-        self.description = (
-            "Directory and file discovery with status code and size tracking"
-        )
+        self.description = "Directory and file discovery with status code and size tracking"
         self.version = "2.0.0"
 
         # Use provided handler or create new one
@@ -88,13 +86,8 @@ class DirectoryEnumerator(BaseModule):
         # Test directories and files with threading
         all_paths = [f"{dir}/" for dir in COMMON_DIRECTORIES] + COMMON_FILES
 
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=self.max_threads
-        ) as executor:
-            futures = {
-                executor.submit(self._test_path, base_url, path): path
-                for path in all_paths
-            }
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
+            futures = {executor.submit(self._test_path, base_url, path): path for path in all_paths}
 
             for future in concurrent.futures.as_completed(futures):
                 path = futures[future]
@@ -119,9 +112,7 @@ class DirectoryEnumerator(BaseModule):
             "findings": self.get_results(),
         }
 
-    async def run_async(
-        self, target: str, verbose: bool = False, **kwargs
-    ) -> Dict[str, Any]:
+    async def run_async(self, target: str, verbose: bool = False, **kwargs) -> Dict[str, Any]:
         """Async directory enumeration with bounded concurrency and optional recursion."""
         self.clear_results()
         self.found_paths = []
@@ -177,12 +168,13 @@ class DirectoryEnumerator(BaseModule):
             if depth > self.max_depth:
                 return
             candidates = self._expand_paths(
-                [f"{dir_path}{d}/" for d in COMMON_DIRECTORIES[:25]]
-                + [f"{dir_path}{f}" for f in COMMON_FILES[:25]]
+                [f"{dir_path}{d}/" for d in COMMON_DIRECTORIES[:25]] + [f"{dir_path}{f}" for f in COMMON_FILES[:25]]
             )
+
             async def limited_test(c):
                 async with semaphore:
                     await self._test_path_async(base_url, c)
+
             await asyncio.gather(*(limited_test(c) for c in candidates))
 
         while frontier:

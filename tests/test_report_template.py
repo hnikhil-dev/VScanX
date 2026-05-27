@@ -37,9 +37,7 @@ def test_template_shows_details_parameter_evidence():
     rendered = tpl.render(
         title="Test Report",
         results=make_sample_results(),
-        summary={
-            "by_severity": {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 0, "LOW": 0, "INFO": 0}
-        },
+        summary={"by_severity": {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 0, "LOW": 0, "INFO": 0}},
         generation_time="2025-12-24",
     )
 

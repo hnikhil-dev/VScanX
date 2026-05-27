@@ -154,7 +154,9 @@ class VerificationEngine:
         sim_score = sim  # 0..1
         entropy_delta = abs(ent_base - ent_test)
         prob_anomaly = (1.0 - sim_score) * 0.55 + stability_score * 0.35 + min(1.0, entropy_delta / 6.0) * 0.10
-        confidence = "HIGH" if verified and prob_anomaly >= 0.55 else ("MEDIUM" if (anomaly or prob_anomaly >= 0.35) else "LOW")
+        confidence = (
+            "HIGH" if verified and prob_anomaly >= 0.55 else ("MEDIUM" if (anomaly or prob_anomaly >= 0.35) else "LOW")
+        )
         return VerificationResult(
             verified=verified,
             confidence=confidence,
@@ -171,4 +173,3 @@ class VerificationEngine:
             "tags": [f"confidence:{vr.confidence}", "verified" if vr.verified else "unverified"],
             "evidence": f"{vr.notes}",
         }
-

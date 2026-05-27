@@ -149,18 +149,10 @@ class ReportGenerator:
             story.append(Paragraph("Detailed Findings", heading_style))
 
             for severity_level in ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]:
-                findings = [
-                    f
-                    for f in results["findings"]
-                    if f.get("severity") == severity_level
-                ]
+                findings = [f for f in results["findings"] if f.get("severity") == severity_level]
 
                 if findings:
-                    story.append(
-                        Paragraph(
-                            f"{severity_level} Severity Issues", styles["Heading3"]
-                        )
-                    )
+                    story.append(Paragraph(f"{severity_level} Severity Issues", styles["Heading3"]))
 
                     for finding in findings:
                         finding_text = f"""
@@ -214,9 +206,7 @@ class ReportGenerator:
 
         with open(filepath, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(
-                ["Module", "Severity", "Description", "Parameter", "Evidence"]
-            )
+            writer.writerow(["Module", "Severity", "Description", "Parameter", "Evidence"])
 
             for finding in results.get("findings", []):
                 writer.writerow(
@@ -265,9 +255,7 @@ class ReportGenerator:
                     f.write(f"    Severity: {finding.get('severity', 'N/A')}\n")
                     f.write(f"    Description: {finding.get('description', 'N/A')}\n")
                     f.write(f"    Parameter: {finding.get('parameter', 'N/A')}\n")
-                    f.write(
-                        f"    Evidence: {str(finding.get('evidence', 'N/A'))[:100]}\n"
-                    )
+                    f.write(f"    Evidence: {str(finding.get('evidence', 'N/A'))[:100]}\n")
                     f.write("\n")
 
         print(f"[+] Text report generated: {filepath}")
@@ -294,9 +282,9 @@ class ReportGenerator:
                 rem_val = html.escape(str(finding.get("remediation")))
                 remediation_html = (
                     '<div style="background: #E8F4F8; border-left: 3px solid #208080; '
-                    'padding: 12px; margin-top: 10px; border-radius: 4px;>'
+                    "padding: 12px; margin-top: 10px; border-radius: 4px;>"
                     f'<p style="margin: 0;"><strong>Remediation:</strong> {rem_val}</p>'
-                    '</div>'
+                    "</div>"
                 )
 
             # Prefer explicit details key, fall back to description or evidence so fields are never left blank
@@ -328,7 +316,7 @@ class ReportGenerator:
                 f'{finding.get("severity", "N/A")}</span></p>'
             )
             desc_val = html.escape(str(finding.get("description", "N/A")))
-            description_html = f'<p><strong>Description:</strong> {desc_val}</p>'
+            description_html = f"<p><strong>Description:</strong> {desc_val}</p>"
             details_html = f'<p class="finding-details"><strong>Details:</strong> {html.escape(str(details_text))}</p>'
             parameter_html = (
                 f'<p class="finding-details"><strong>Parameter:</strong> '
@@ -339,21 +327,17 @@ class ReportGenerator:
             confidence_html = ""
             if finding.get("confidence"):
                 conf_val = html.escape(str(finding.get("confidence")))
-                confidence_html = (
-                    f'<p class="finding-details"><strong>Confidence:</strong> '
-                    f"{conf_val}</p>"
-                )
+                confidence_html = f'<p class="finding-details"><strong>Confidence:</strong> ' f"{conf_val}</p>"
             verified_html = ""
             verified_val = finding.get("verified", None)
             if verified_val is not None:
                 verified_html = (
-                    '<p class="finding-details"><strong>Verified:</strong> '
-                    f"{'Yes' if verified_val else 'No'}</p>"
+                    '<p class="finding-details"><strong>Verified:</strong> ' f"{'Yes' if verified_val else 'No'}</p>"
                 )
 
             return (
                 '<div style="border-left: 4px solid '
-                f'{severity_color}; padding: 15px; margin-bottom: 15px; background: #F8F9FA;>'
+                f"{severity_color}; padding: 15px; margin-bottom: 15px; background: #F8F9FA;>"
                 + module_html
                 + severity_html
                 + description_html
@@ -363,7 +347,7 @@ class ReportGenerator:
                 + parameter_html
                 + evidence_html
                 + remediation_html
-                + '</div>'
+                + "</div>"
             )
 
         all_findings: List[Dict[str, Any]] = list(results.get("findings", []))
@@ -407,7 +391,7 @@ class ReportGenerator:
                 f'<div style="padding-left: 14px; margin-top: 10px;">'
                 f'<p style="margin: 0 0 10px 0; opacity: 0.85;">{html.escape(endpoint_summary)}</p>'
                 + group_body
-                + '</div></details>'
+                + "</div></details>"
             )
 
         # Finding timeline: sorted by timestamp (desc) for triage flow.
@@ -449,17 +433,11 @@ class ReportGenerator:
             module_name = html.escape(str(module.get("module", "Unknown module")))
             finding_count = len(module.get("findings", []))
             duration = module.get("duration")
-            duration_text = (
-                f"{float(duration):.2f}s"
-                if isinstance(duration, (int, float))
-                else "n/a"
-            )
+            duration_text = f"{float(duration):.2f}s" if isinstance(duration, (int, float)) else "n/a"
             artifact_text = ""
             artifacts = module.get("artifacts", {})
             if isinstance(artifacts, dict) and artifacts:
-                preview = ", ".join(
-                    [f"{k}={v}" for k, v in artifacts.items() if not isinstance(v, list)]
-                )
+                preview = ", ".join([f"{k}={v}" for k, v in artifacts.items() if not isinstance(v, list)])
                 artifact_text = f"<p><strong>Artifacts:</strong> {html.escape(preview[:120])}</p>"
             modules_html += (
                 '<div class="module-card">'

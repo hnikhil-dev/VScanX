@@ -21,11 +21,13 @@ RESET = "\033[0m"
 BOLD = "\033[1m"
 DIM = "\033[2m"
 
+
 def init_console() -> None:
     """Initialize virtual terminal sequence support for Windows."""
     if sys.platform == "win32":
         try:
             import ctypes
+
             kernel32 = ctypes.windll.kernel32
             # Enable ENABLE_VIRTUAL_TERMINAL_PROCESSING
             kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
@@ -33,14 +35,15 @@ def init_console() -> None:
             # Fallback
             os.system("color")
 
+
 def print_banner() -> None:
     """Display the beautiful retro red hacker-style banner."""
     init_console()
     banner = f"""{RED}{BOLD}
 ██╗   ██╗███████╗ ██████╗ █████╗ ███╗   ██╗██╗  ██╗
 ██║   ██║██╔════╝██╔════╝██╔══██╗████╗  ██║╚██╗██╔╝
-██║   ██║███████╗██║     ███████║██╔██╗ ██║ ╚███╔╝ 
-╚██╗ ██╔╝╚════██║██║     ██╔══██║██║╚██╗██║ ██╔██╗ 
+██║   ██║███████╗██║     ███████║██╔██╗ ██║ ╚███╔╝
+╚██╗ ██╔╝╚════██║██║     ██╔══██║██║╚██╗██║ ██╔██╗
  ╚████╔╝ ███████║╚██████╗██║  ██║██║ ╚████║██╔╝ ██╗
   ╚═══╝  ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
                  {WHITE}Ethical Vulnerability Scanner{RESET}{RED}{BOLD}
@@ -55,15 +58,16 @@ def print_banner() -> None:
         ascii_banner = f"""{RED}{BOLD}
 __      __  _____                             __   __
 \\ \\    / / / ____|                            \\ \\ / /
- \\ \\  / / | (___     ___    __ _   _ __        \\ V / 
-  \\ \\/ /   \\___ \\   / __|  / _` | | '_ \\        > <  
-   \\  /    ____) | | (__  | (_| | | | | |      / . \\ 
+ \\ \\  / / | (___     ___    __ _   _ __        \\ V /
+  \\ \\/ /   \\___ \\   / __|  / _` | | '_ \\        > <
+   \\  /    ____) | | (__  | (_| | | | | |      / . \\
     \\/    |_____/   \\___|  \\__,_| |_| |_|     /_/ \\_\\
 
                  {WHITE}Ethical Vulnerability Scanner{RESET}{RED}{BOLD}
                    Version 2.1.0 (Elite Suite)
 ========================================================{RESET}"""
         print(ascii_banner)
+
 
 def print_legal_warning() -> None:
     """Display standard legal usage warning."""
@@ -83,11 +87,14 @@ The developers assume NO liability for misuse of this tool.
 """
     print(warning)
 
-def print_scan_started(target: str, scan_type: str, profile_name: str | None, profile_desc: str | None, threads: int, delay: float) -> None:
+
+def print_scan_started(
+    target: str, scan_type: str, profile_name: str | None, profile_desc: str | None, threads: int, delay: float
+) -> None:
     """Print the structured scan metadata header block."""
     p_name = profile_name.upper() if profile_name else "CUSTOM"
     p_desc = f" ({profile_desc})" if profile_desc else ""
-    
+
     print(f"\n{CYAN}{BOLD}[*] SCAN INITIALIZED{RESET}")
     print(f"    {BOLD}Target    :{RESET} {target}")
     print(f"    {BOLD}Scan Type :{RESET} {scan_type.upper()}")
@@ -97,9 +104,11 @@ def print_scan_started(target: str, scan_type: str, profile_name: str | None, pr
     print(f"    {BOLD}Started At:{RESET} {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{DIM}--------------------------------------------------------{RESET}\n")
 
+
 def print_checking(module_name: str) -> None:
     """Print green high-level checking notification."""
     print(f"{GREEN}[*] Checking:{RESET} {module_name}")
+
 
 def print_completed(module_name: str, duration: float, error: str | None = None) -> None:
     """Print completed module notification."""
@@ -112,10 +121,11 @@ def print_completed(module_name: str, duration: float, error: str | None = None)
     else:
         print(f"{DIM}[+] Completed:{RESET} {module_name} in {duration}s")
 
+
 def print_finding(finding: dict) -> None:
     """Print the stylized red vulnerability alert block."""
     severity = str(finding.get("severity", "UNKNOWN")).upper()
-    
+
     # Silence generic INFO level status events from displaying as scary Vulnerability alerts
     if severity == "INFO":
         return
@@ -125,17 +135,17 @@ def print_finding(finding: dict) -> None:
     parameter = finding.get("parameter", "")
     evidence = finding.get("evidence")
     description = finding.get("description", "")
-    
+
     # Clean fallback for empty endpoint/URL
     if not endpoint or str(endpoint).strip() in ("", "None", "N/A"):
         endpoint = "N/A"
-        
+
     payload_str = "N/A"
-    
+
     # Check if a specific parameter is highlighted
     if parameter and str(parameter).strip() not in ("", "None", "N/A"):
         payload_str = f"Parameter: {parameter}"
-        
+
     # Check for evidence details or proof-of-concept payloads
     if evidence:
         if isinstance(evidence, dict):
@@ -149,7 +159,7 @@ def print_finding(finding: dict) -> None:
                 payload_str = ", ".join(f"{k}: {v}" for k, v in evidence.items() if v)
         else:
             payload_str = str(evidence)
-            
+
     # Include description if parameter/evidence is not detailed
     if payload_str == "N/A" and description:
         payload_str = description
@@ -159,6 +169,7 @@ def print_finding(finding: dict) -> None:
     print(f"    {BOLD}Type    :{RESET} {severity} {module}")
     print(f"    {BOLD}URL     :{RESET} {endpoint}")
     print(f"    {BOLD}Payload :{RESET} {payload_str}\n")
+
 
 def print_summary(summary: dict, report_paths: list[str]) -> None:
     """Print scan completion summary."""
@@ -175,7 +186,7 @@ def print_summary(summary: dict, report_paths: list[str]) -> None:
     if summary.get("authenticated"):
         print(f"  {CYAN}Authentication: ENABLED{RESET}")
     print(f"{CYAN}{BOLD}" + "=" * 60 + f"{RESET}")
-    
+
     if report_paths:
         print(f"\n{GREEN}{BOLD}[+] Reports Generated:{RESET}")
         for path in report_paths:

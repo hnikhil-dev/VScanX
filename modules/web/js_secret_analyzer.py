@@ -4,7 +4,7 @@ Discovers JavaScript files and scans for credentials and internal endpoints.
 """
 
 import re
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 from core.config import JS_SECRET_PATTERNS
 from core.request_handler import RequestHandler
@@ -118,7 +118,7 @@ class JSSecretAnalyzer(BaseModule):
             self.add_result(
                 severity="INFO",
                 finding="JavaScript exposed internal/API endpoints",
-                details=", ".join(sorted({e['endpoint'] for e in endpoints})[:20]),
+                details=", ".join(sorted({e["endpoint"] for e in endpoints})[:20]),
             )
         if not secrets and not endpoints:
             self.add_result(

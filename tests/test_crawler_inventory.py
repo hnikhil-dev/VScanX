@@ -11,4 +11,3 @@ def test_normalize_url_sorts_query_and_drops_fragment():
 def test_same_origin():
     assert same_origin("https://a.com/x", "https://a.com/y") is True  # nosec: B101
     assert same_origin("https://a.com/x", "http://a.com/y") is False  # nosec: B101
-

@@ -6,12 +6,15 @@ Uses dry-run call simulations to verify access controls without modifying blockc
 
 import json
 from typing import Any, Dict
+
 from modules.base_module import BaseModule
+
 
 # Dynamic import helper for Web3 to fail gracefully if package not installed
 def get_web3_client(rpc_url: str):
     try:
         from web3 import Web3
+
         return Web3(Web3.HTTPProvider(rpc_url))
     except ImportError:
         return None
@@ -24,50 +27,32 @@ STANDARD_OWNERSHIP_ABI = [
         "name": "owner",
         "outputs": [{"internalType": "address", "name": "", "type": "address"}],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
     },
     {
         "inputs": [],
         "name": "admin",
         "outputs": [{"internalType": "address", "name": "", "type": "address"}],
         "stateMutability": "view",
-        "type": "function"
+        "type": "function",
     },
     {
         "inputs": [{"internalType": "address", "name": "newOwner", "type": "address"}],
         "name": "transferOwnership",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
     },
     {
         "inputs": [{"internalType": "address", "name": "newAdmin", "type": "address"}],
         "name": "setAdmin",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
+        "type": "function",
     },
-    {
-        "inputs": [],
-        "name": "renounceOwnership",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "pause",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "unpause",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    }
+    {"inputs": [], "name": "renounceOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function"},
+    {"inputs": [], "name": "pause", "outputs": [], "stateMutability": "nonpayable", "type": "function"},
+    {"inputs": [], "name": "unpause", "outputs": [], "stateMutability": "nonpayable", "type": "function"},
 ]
 
 
@@ -84,12 +69,12 @@ class AccessControlChecker(BaseModule):
 
     def run(self, target: str, **kwargs) -> Dict[str, Any]:
         self.clear_results()
-        
+
         # Web3 variables passed from CLI / Orchestrator
         rpc_url = kwargs.get("rpc_url") or getattr(self, "rpc_url", None)
         contract_address = kwargs.get("contract") or getattr(self, "contract", None)
         abi_path = kwargs.get("abi") or getattr(self, "abi", None)
-        
+
         if not rpc_url or not contract_address:
             self.add_result(
                 severity="INFO",
@@ -106,7 +91,7 @@ class AccessControlChecker(BaseModule):
                 details="Python 'web3' package is required for Smart Contract scanning. Run: pip install web3",
                 remediation="Install 'web3>=6.0.0' using python's package manager.",
                 confidence="HIGH",
-                verified=False
+                verified=False,
             )
             return {"module": self.name, "target": target, "findings": self.get_results()}
 
@@ -117,7 +102,7 @@ class AccessControlChecker(BaseModule):
                 details=f"Unable to connect to Ethereum/EVM node at RPC URL: {rpc_url}",
                 remediation="Ensure the RPC endpoint is active and correct.",
                 confidence="HIGH",
-                verified=False
+                verified=False,
             )
             return {"module": self.name, "target": target, "findings": self.get_results()}
 
@@ -127,7 +112,7 @@ class AccessControlChecker(BaseModule):
             try:
                 with open(abi_path, "r", encoding="utf-8") as f:
                     abi = json.load(f)
-            except Exception as e:
+            except Exception:
                 # Fallback to standard
                 pass
 
@@ -140,7 +125,7 @@ class AccessControlChecker(BaseModule):
                 severity="HIGH",
                 finding="Invalid Contract Address format",
                 details=f"Address '{contract_address}' could not be parsed: {str(e)}",
-                confidence="HIGH"
+                confidence="HIGH",
             )
             return {"module": self.name, "target": target, "findings": self.get_results()}
 
@@ -164,7 +149,7 @@ class AccessControlChecker(BaseModule):
             {"name": "setAdmin", "args": [unauthorized_caller]},
             {"name": "renounceOwnership", "args": []},
             {"name": "pause", "args": []},
-            {"name": "unpause", "args": []}
+            {"name": "unpause", "args": []},
         ]
 
         for func in admin_functions:
@@ -175,7 +160,7 @@ class AccessControlChecker(BaseModule):
                     # If this does NOT raise a contract logic error/revert, it's vulnerable!
                     f_obj = getattr(contract.functions, func_name)(*func["args"])
                     f_obj.call({"from": unauthorized_caller})
-                    
+
                     # If we reach here, it means the transaction simulation succeeded without reverting!
                     self.add_result(
                         severity="CRITICAL",
@@ -184,9 +169,9 @@ class AccessControlChecker(BaseModule):
                         remediation="Enforce strict access checks like 'onlyOwner' or 'require(msg.sender == owner)' modifier on all administrative functions.",
                         confidence="HIGH",
                         verified=True,
-                        tags=["SC01:2026", "access-control", "web3"]
+                        tags=["SC01:2026", "access-control", "web3"],
                     )
-                except Exception as e:
+                except Exception:
                     # Typical reverting exception details are logged securely
                     pass
 
@@ -201,4 +186,5 @@ class AccessControlChecker(BaseModule):
 
     async def run_async(self, target: str, **kwargs) -> Dict[str, Any]:
         import asyncio
+
         return await asyncio.to_thread(self.run, target, **kwargs)

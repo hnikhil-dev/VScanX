@@ -29,11 +29,11 @@ class ErrorHandlingProber(BaseModule):
 
         # Anomalous payloads designed to trigger unhandled exceptions
         self.malformed_payloads = [
-            "'\"()[]{};:<>?*-+", # special char mixup
-            "[]", # Array type confusion
-            "%00", # Null byte
-            "9999999999999999999999999999999999999999999999999999999999", # Big integer overflow
-            "../../../../../../../../etc/passwd", # Path traversal attempt (sometimes causes file handler errors)
+            "'\"()[]{};:<>?*-+",  # special char mixup
+            "[]",  # Array type confusion
+            "%00",  # Null byte
+            "9999999999999999999999999999999999999999999999999999999999",  # Big integer overflow
+            "../../../../../../../../etc/passwd",  # Path traversal attempt (sometimes causes file handler errors)
         ]
 
         # Stack trace & directory leak patterns
@@ -48,7 +48,7 @@ class ErrorHandlingProber(BaseModule):
             {"pattern": "zerodivisionerror:", "desc": "Python Division by Zero"},
             {"pattern": "typeerror:", "desc": "Type Mismatch Exception"},
             {"pattern": "syntaxerror:", "desc": "Syntax/Parser Exception"},
-            {"pattern": "file \"", "desc": "Python Code Location Disclosure"},
+            {"pattern": 'file "', "desc": "Python Code Location Disclosure"},
             {"pattern": "on line", "desc": "PHP/ASP Script Line Disclosure"},
             {"pattern": "in /var/www/", "desc": "Linux Web Directory Path Disclosure"},
             {"pattern": "in C:\\", "desc": "Windows Directory Path Disclosure"},
@@ -80,7 +80,7 @@ class ErrorHandlingProber(BaseModule):
             for payload in self.malformed_payloads:
                 test_params = params.copy()
                 test_params[param_name] = payload
-                
+
                 resp = self.handler.get(base_url, params=test_params)
                 if not resp:
                     continue
@@ -102,7 +102,9 @@ class ErrorHandlingProber(BaseModule):
                     # Generic check for standard 500 page vs raw server error leak
                     if any(x in resp.text.lower() for x in ["exception", "error", "stack", "trace", "line"]):
                         is_vuln = True
-                        vuln_desc = "Server returned HTTP 500 with descriptive error text, potentially leaking inner state."
+                        vuln_desc = (
+                            "Server returned HTTP 500 with descriptive error text, potentially leaking inner state."
+                        )
 
                 if is_vuln:
                     self.add_result(
@@ -114,9 +116,9 @@ class ErrorHandlingProber(BaseModule):
                         verified=True,
                         parameter=param_name,
                         evidence=f"Matched signature: '{matched_text}' in response body. Status Code: {resp.status_code}",
-                        tags=["A10:2026", "error-handling", "information-disclosure"]
+                        tags=["A10:2026", "error-handling", "information-disclosure"],
                     )
-                    break # one crash indicator per parameter is enough
+                    break  # one crash indicator per parameter is enough
 
         if not self.get_results():
             self.add_result(
@@ -132,6 +134,7 @@ class ErrorHandlingProber(BaseModule):
 
     async def run_async_wrapper(self, target: str, **kwargs):
         import asyncio
+
         return await asyncio.to_thread(self.run, target, **kwargs)
 
     def _extract_parameters(self, target: str):

@@ -88,9 +88,7 @@ class DefensiveVariantGenerator:
             if strict:
                 inconsistent = status != base_status
             else:
-                inconsistent = status != base_status or abs(length - base_len) > max(
-                    120, int(base_len * 0.35)
-                )
+                inconsistent = status != base_status or abs(length - base_len) > max(120, int(base_len * 0.35))
 
             if inconsistent:
                 inconsistencies.append(VariantResult(url=v, status_code=status, length=length))
@@ -102,4 +100,3 @@ class DefensiveVariantGenerator:
             "baseline": {"status_code": base_status, "length": base_len},
             "variants": [i.__dict__ for i in inconsistencies][:20],
         }
-

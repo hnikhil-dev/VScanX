@@ -52,4 +52,3 @@ def test_replay_verify_open_redirect_updates_state():
     assert st["reverified"] == 1  # nosec: B101
     assert f["verification_state"] in ["VERIFIED", "CANDIDATE"]  # nosec: B101
     assert "enrichment_history" in f  # nosec: B101
-

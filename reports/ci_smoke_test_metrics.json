@@ -1,8 +1,8 @@
 {
   "scan_id": null,
   "metrics": {
-    "started_at": 1779878310.1099966,
-    "uptime": 97.111,
+    "started_at": 1779884127.197617,
+    "uptime": 96.954,
     "counters": {
       "findings.INFO": 19,
       "findings.MEDIUM": 4,
@@ -11,22 +11,22 @@
     },
     "timings": {
       "module.Tech Stack Fingerprinter.seconds": 0.02,
-      "module.Authenticated Crawler.seconds": 6e-06,
-      "module.HTTP Headers Analyzer.seconds": 0.077,
-      "module.CVE Database Checker.seconds": 0.061,
+      "module.Authenticated Crawler.seconds": 7e-06,
+      "module.HTTP Headers Analyzer.seconds": 0.078,
+      "module.CVE Database Checker.seconds": 0.065,
       "module.XSS Detector.seconds": 0.126,
-      "module.SQL Injection Detector.seconds": 0.443,
-      "module.Rate Limit Checker.seconds": 0.755,
-      "module.Authentication Bypass Detector.seconds": 1.264,
-      "module.HTTP Parameter Pollution Detector.seconds": 0.319,
-      "module.JS Secret Analyzer.seconds": 0.057,
+      "module.SQL Injection Detector.seconds": 0.441,
+      "module.Rate Limit Checker.seconds": 0.745,
+      "module.Authentication Bypass Detector.seconds": 1.241,
+      "module.HTTP Parameter Pollution Detector.seconds": 0.311,
+      "module.JS Secret Analyzer.seconds": 0.062,
       "module.Open Redirect Prober.seconds": 0.0,
-      "module.Directory Enumerator.seconds": 15.87,
-      "module.Crypto and TLS Analyzer.seconds": 0.003,
-      "module.OS Command Injection Detector.seconds": 20.004,
+      "module.Directory Enumerator.seconds": 15.74,
+      "module.Crypto and TLS Analyzer.seconds": 0.006,
+      "module.OS Command Injection Detector.seconds": 20.006,
       "module.Error Handling Prober.seconds": 5.001,
       "module.Internal Scan Graph.seconds": 3e-06,
-      "scan_total_seconds": 96.84
+      "scan_total_seconds": 96.67
     }
   }
 }

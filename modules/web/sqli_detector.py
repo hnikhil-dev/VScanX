@@ -22,9 +22,7 @@ class SQLiDetector(BaseModule):
     def __init__(self, custom_payloads: List[str] = None, handler=None):
         super().__init__()
         self.name = "SQL Injection Detector"
-        self.description = (
-            "SQL injection vulnerability detection (error-based, boolean-based)"
-        )
+        self.description = "SQL injection vulnerability detection (error-based, boolean-based)"
         self.version = "2.0.0"
 
         # Use provided handler or create new one
@@ -114,9 +112,7 @@ class SQLiDetector(BaseModule):
 
         return {"module": self.name, "target": target, "findings": self.get_results()}
 
-    async def run_async(
-        self, target: str, verbose: bool = False, **kwargs
-    ) -> Dict[str, Any]:
+    async def run_async(self, target: str, verbose: bool = False, **kwargs) -> Dict[str, Any]:
         """Async SQLi detector path for orchestrator concurrency."""
         self.clear_results()
         self.verbose = verbose
@@ -156,9 +152,7 @@ class SQLiDetector(BaseModule):
                     break
         return {"module": self.name, "target": target, "findings": self.get_results()}
 
-    def _is_sqli_anomaly(
-        self, response, baseline_length: int, baseline_status: int
-    ) -> bool:
+    def _is_sqli_anomaly(self, response, baseline_length: int, baseline_status: int) -> bool:
         import re
 
         response_lower = response.text.lower()
@@ -226,9 +220,7 @@ class SQLiDetector(BaseModule):
                 continue
 
             # Try boolean-based detection
-            bool_result = self._test_boolean_based(
-                base_url, params, param_name, baseline_length
-            )
+            bool_result = self._test_boolean_based(base_url, params, param_name, baseline_length)
             if bool_result:
                 self.add_result(
                     severity="HIGH",
@@ -318,16 +310,12 @@ class SQLiDetector(BaseModule):
         # Check for status code changes
         if response.status_code != baseline_status and response.status_code >= 500:
             if self.verbose:
-                logger.debug(
-                    "sqli_status_anomaly", extra={"status": response.status_code}
-                )
+                logger.debug("sqli_status_anomaly", extra={"status": response.status_code})
             return True
 
         return False
 
-    def _test_error_based(
-        self, base_url: str, params: Dict[str, str], test_param: str
-    ) -> bool:
+    def _test_error_based(self, base_url: str, params: Dict[str, str], test_param: str) -> bool:
         """
         Test for error-based SQL injection
         Looks for database error patterns in response
@@ -362,9 +350,7 @@ class SQLiDetector(BaseModule):
             for pattern in self.error_patterns:
                 if re.search(pattern, response_lower, re.IGNORECASE):
                     if self.verbose:
-                        logger.debug(
-                            "sqli_error_based_match", extra={"pattern": pattern}
-                        )
+                        logger.debug("sqli_error_based_match", extra={"pattern": pattern})
                     return True
 
         return False

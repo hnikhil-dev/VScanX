@@ -75,9 +75,7 @@ def test_orchestrator_summary_consistency():
     sr = ScanResult(
         target="http://example.local",
         scan_type="web",
-        findings=[
-            Finding(module="XSS Detector", severity="HIGH", description="Reflected XSS")
-        ],
+        findings=[Finding(module="XSS Detector", severity="HIGH", description="Reflected XSS")],
         modules=[
             {
                 "module": "XSS Detector",

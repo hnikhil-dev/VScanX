@@ -5,12 +5,14 @@ CLI event reporter for VScanX. Subscribes to the EventBus and prints styled term
 from __future__ import annotations
 
 from typing import Any
+
+from core.console import print_checking, print_completed, print_finding, print_scan_started
 from core.events.bus import EventBus
-from core.console import print_scan_started, print_checking, print_completed, print_finding
+
 
 class CLIReporter:
     """Subscribes to EventBus scan events to print beautiful hacker-style console output."""
-    
+
     def __init__(self, event_bus: EventBus) -> None:
         self.event_bus = event_bus
         self.register_listeners()
@@ -30,7 +32,7 @@ class CLIReporter:
             profile_name=payload.get("profile_name"),
             profile_desc=payload.get("profile_desc"),
             threads=payload.get("threads", 10),
-            delay=payload.get("delay", 1.0)
+            delay=payload.get("delay", 1.0),
         )
 
     def on_module_started(self, event_type: str, payload: Any) -> None:
@@ -49,5 +51,5 @@ class CLIReporter:
         print_completed(
             module_name=payload.get("module", "Unknown Module"),
             duration=payload.get("duration", 0.0),
-            error=payload.get("error")
+            error=payload.get("error"),
         )

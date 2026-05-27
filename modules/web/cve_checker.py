@@ -66,9 +66,7 @@ class CVEChecker(BaseModule):
                 details="Unable to identify server software",
             )
         else:
-            logger.info(
-                "cve_versions_detected", extra={"count": len(software_versions)}
-            )
+            logger.info("cve_versions_detected", extra={"count": len(software_versions)})
             self._check_cves(software_versions)
 
         return {
@@ -78,9 +76,7 @@ class CVEChecker(BaseModule):
             "findings": self.get_results(),
         }
 
-    async def run_async(
-        self, target: str, verbose: bool = False, **kwargs
-    ) -> Dict[str, Any]:
+    async def run_async(self, target: str, verbose: bool = False, **kwargs) -> Dict[str, Any]:
         """Async CVE check path."""
         self.clear_results()
         self.verbose = verbose
@@ -124,9 +120,7 @@ class CVEChecker(BaseModule):
         # Check Server header
         if "Server" in headers:
             server = headers["Server"]
-            logging.getLogger("vscanx.module.cve_checker").debug(
-                "cve_server_header", extra={"value": server}
-            )
+            logging.getLogger("vscanx.module.cve_checker").debug("cve_server_header", extra={"value": server})
 
             # Parse common formats
             patterns = [
@@ -156,9 +150,7 @@ class CVEChecker(BaseModule):
         # Check X-Powered-By header
         if "X-Powered-By" in headers:
             powered = headers["X-Powered-By"]
-            logging.getLogger("vscanx.module.cve_checker").debug(
-                "cve_x_powered_by", extra={"value": powered}
-            )
+            logging.getLogger("vscanx.module.cve_checker").debug("cve_x_powered_by", extra={"value": powered})
 
             php_match = re.search(r"PHP/([\d.]+)", powered)
             if php_match:

@@ -118,9 +118,7 @@ class HPPDetector(BaseModule):
                 details="URL contains no query parameters",
             )
             return
-        baseline = await self.handler.async_get(
-            base_url, params={k: v[0] for k, v in params.items()}
-        )
+        baseline = await self.handler.async_get(base_url, params={k: v[0] for k, v in params.items()})
         if not baseline:
             return
         base_len = len(baseline.text)
@@ -134,9 +132,7 @@ class HPPDetector(BaseModule):
                 size_change = abs(len(resp.text) - base_len) > max(30, int(base_len * 0.15))
                 if status_change or size_change:
                     test_url = str(resp.request.url) if getattr(resp, "request", None) else base_url
-                    base_url_full = (
-                        str(baseline.request.url) if getattr(baseline, "request", None) else base_url
-                    )
+                    base_url_full = str(baseline.request.url) if getattr(baseline, "request", None) else base_url
                     vr = self.verifier.verify_response_anomaly(
                         handler=self.handler,
                         baseline_url=base_url_full,

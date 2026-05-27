@@ -64,9 +64,7 @@ class SocketPortScanner(BaseModule):
         try:
             resolved_ip = socket.gethostbyname(target)
             if resolved_ip != target:
-                logger.info(
-                    "socket_scan_resolved", extra={"target": target, "ip": resolved_ip}
-                )
+                logger.info("socket_scan_resolved", extra={"target": target, "ip": resolved_ip})
             target_ip = resolved_ip
         except socket.gaierror:
             logger.error("socket_scan_resolve_failed", extra={"target": target})
@@ -88,13 +86,10 @@ class SocketPortScanner(BaseModule):
 
         logger = logging.getLogger("vscanx.module.socket_scanner")
 
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=self.max_threads
-        ) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
             # Submit all port scan tasks
             future_to_port = {
-                executor.submit(self._scan_port, target_ip, port): port
-                for port in range(start_port, end_port + 1)
+                executor.submit(self._scan_port, target_ip, port): port for port in range(start_port, end_port + 1)
             }
 
             # Process results as they complete
@@ -125,9 +120,7 @@ class SocketPortScanner(BaseModule):
                             finding=f"Open port: {port}/{service}",
                             details=details,
                         )
-                        logger.info(
-                            "port_open", extra={"port": port, "service": service}
-                        )
+                        logger.info("port_open", extra={"port": port, "service": service})
                 except Exception as e:
                     if self.verbose:
                         logger.exception("Error scanning port %s: %s", port, e)

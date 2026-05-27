@@ -41,9 +41,7 @@ class RateLimitChecker(BaseModule):
             "findings": self.get_results(),
         }
 
-    async def run_async(
-        self, target: str, verbose: bool = False, **kwargs
-    ) -> Dict[str, Any]:
+    async def run_async(self, target: str, verbose: bool = False, **kwargs) -> Dict[str, Any]:
         self.clear_results()
         if not target.startswith(("http://", "https://")):
             target = f"http://{target}"
@@ -83,17 +81,12 @@ class RateLimitChecker(BaseModule):
             self.add_result(
                 severity="INFO",
                 finding="Rate-limiting behavior detected",
-                details=(
-                    f"Burst responses: 429={analysis['status_429']}, "
-                    f"403={analysis['status_403']}"
-                ),
+                details=(f"Burst responses: 429={analysis['status_429']}, " f"403={analysis['status_403']}"),
             )
         else:
             self.add_result(
                 severity="MEDIUM",
                 finding="No clear rate-limiting protection detected",
-                details=(
-                    f"{analysis['total_requests']} rapid requests completed without 429/403"
-                ),
+                details=(f"{analysis['total_requests']} rapid requests completed without 429/403"),
                 remediation="Add per-IP and per-user burst limits with 429 responses",
             )

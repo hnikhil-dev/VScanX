@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
 
@@ -26,9 +25,7 @@ def _evidence_summary(f: Dict[str, Any]) -> str:
     return str(ev)[:500]
 
 
-def diff_scan_results(
-    a: Dict[str, Any], b: Dict[str, Any]
-) -> Dict[str, Any]:
+def diff_scan_results(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
     """
     Compute a finding-level diff between two ScanResult dicts.
 
@@ -38,8 +35,8 @@ def diff_scan_results(
     - CHANGED: same key in both but key fields differ
     - UNCHANGED: same key and fields match
     """
-    fa = { _finding_key(f): f for f in (a.get("findings") or []) if isinstance(f, dict) }
-    fb = { _finding_key(f): f for f in (b.get("findings") or []) if isinstance(f, dict) }
+    fa = {_finding_key(f): f for f in (a.get("findings") or []) if isinstance(f, dict)}
+    fb = {_finding_key(f): f for f in (b.get("findings") or []) if isinstance(f, dict)}
 
     a_keys = set(fa.keys())
     b_keys = set(fb.keys())
@@ -56,15 +53,15 @@ def diff_scan_results(
         b1 = fb[k]
         diffs: Dict[str, Tuple[Any, Any]] = {}
 
-        def chk(field: str, av: Any, bv: Any) -> None:
+        for field, av, bv in [
+            ("severity", a1.get("severity"), b1.get("severity")),
+            ("confidence", a1.get("confidence"), b1.get("confidence")),
+            ("verification_state", a1.get("verification_state"), b1.get("verification_state")),
+            ("verified", a1.get("verified"), b1.get("verified")),
+            ("evidence.summary", _evidence_summary(a1), _evidence_summary(b1)),
+        ]:
             if av != bv:
                 diffs[field] = (av, bv)
-
-        chk("severity", a1.get("severity"), b1.get("severity"))
-        chk("confidence", a1.get("confidence"), b1.get("confidence"))
-        chk("verification_state", a1.get("verification_state"), b1.get("verification_state"))
-        chk("verified", a1.get("verified"), b1.get("verified"))
-        chk("evidence.summary", _evidence_summary(a1), _evidence_summary(b1))
 
         if diffs:
             changed.append(
@@ -103,4 +100,3 @@ def diff_scan_results(
         "unchanged": unchanged,
     }
     return out
-

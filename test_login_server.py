@@ -9,7 +9,6 @@ from urllib.parse import parse_qs, urlparse
 
 
 class LoginHandler(BaseHTTPRequestHandler):
-
     def log_message(self, format, *args):
         """Override to show requests"""
         print(f"[REQUEST] {format % args}")
@@ -60,9 +59,7 @@ class LoginHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-type", "text/html")
                     self.send_header("Server", "TestServer/1.0 Python/3.11")
                     self.end_headers()
-                    self.wfile.write(
-                        b"<html><body><h1>403 - Access Denied - Login Required</h1></body></html>"
-                    )
+                    self.wfile.write(b"<html><body><h1>403 - Access Denied - Login Required</h1></body></html>")
 
             elif self.path == "/admin":
                 cookie = self.headers.get("Cookie", "")
@@ -126,9 +123,7 @@ class LoginHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-type", "text/html")
                     self.send_header("Server", "TestServer/1.0 Python/3.11")
                     self.end_headers()
-                    self.wfile.write(
-                        b"<html><body><h1>403 - Access Denied</h1></body></html>"
-                    )
+                    self.wfile.write(b"<html><body><h1>403 - Access Denied</h1></body></html>")
 
             else:
                 # 404 for unknown paths
@@ -144,9 +139,7 @@ class LoginHandler(BaseHTTPRequestHandler):
                 self.send_response(500)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
-                self.wfile.write(
-                    b"<html><body><h1>500 - Server Error</h1></body></html>"
-                )
+                self.wfile.write(b"<html><body><h1>500 - Server Error</h1></body></html>")
             except Exception:  # nosec: B110
                 pass
 
@@ -196,9 +189,7 @@ class LoginHandler(BaseHTTPRequestHandler):
                 self.send_response(500)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
-                self.wfile.write(
-                    b"<html><body><h1>500 - Server Error</h1></body></html>"
-                )
+                self.wfile.write(b"<html><body><h1>500 - Server Error</h1></body></html>")
             except Exception:  # nosec: B110
                 pass
 

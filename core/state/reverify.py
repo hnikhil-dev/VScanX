@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 from core.verify.engine import VerificationEngine
 
@@ -106,4 +106,3 @@ def reverify_results(
             continue
 
     return out, stats
-

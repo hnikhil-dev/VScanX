@@ -39,7 +39,7 @@ class PoCGenerator:
                     PoC(
                         title="Validate missing security headers",
                         severity=sev,
-                        command=f"curl -s -I \"{target}\"",
+                        command=f'curl -s -I "{target}"',
                         notes="Review response headers and verify required security headers.",
                     )
                 )
@@ -48,7 +48,7 @@ class PoCGenerator:
                     PoC(
                         title="Validate JS secret exposure",
                         severity=sev,
-                        command=f"curl -s \"{target}\" | head -n 50",
+                        command=f'curl -s "{target}" | head -n 50',
                         notes="Locate referenced JS assets and inspect for the matched secret pattern.",
                     )
                 )
@@ -57,7 +57,7 @@ class PoCGenerator:
                     PoC(
                         title="Validate rate limiting",
                         severity=sev,
-                        command=f"for i in $(seq 1 12); do curl -s -o /dev/null -w \"%{{http_code}}\\n\" \"{target}\"; done",
+                        command=f'for i in $(seq 1 12); do curl -s -o /dev/null -w "%{{http_code}}\\n" "{target}"; done',
                         notes="Look for 429 responses under burst traffic.",
                     )
                 )
@@ -66,7 +66,7 @@ class PoCGenerator:
                     PoC(
                         title="Validate IDOR parameter mutation",
                         severity=sev,
-                        command=f"curl -s -i \"{target}\" | head -n 40",
+                        command=f'curl -s -i "{target}" | head -n 40',
                         notes=f"Review object-level authorization for parameter '{param}'. Evidence: {evidence[:100]}",
                     )
                 )
@@ -76,4 +76,3 @@ class PoCGenerator:
         for p in pocs:
             uniq[p.title + "|" + p.command] = p
         return list(uniq.values())[:25]
-

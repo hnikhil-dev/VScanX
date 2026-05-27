@@ -36,11 +36,8 @@ def test_crawler_records_skip_reasons_and_truncation():
     }
 
     crawler = AuthenticatedCrawler(handler=DummyHandler(mapping))
-    out = __import__("asyncio").run(
-        crawler.crawl(start, CrawlConfig(max_urls=10, max_depth=1, max_frontier=10))
-    )
+    out = __import__("asyncio").run(crawler.crawl(start, CrawlConfig(max_urls=10, max_depth=1, max_frontier=10)))
     diag = out.get("diagnostics", {})
     assert diag.get("truncated_pages", 0) >= 1  # nosec: B101
     assert diag.get("denied_by_content_type", 0) >= 1  # nosec: B101
     assert isinstance(diag.get("skipped_reasons", {}), dict)  # nosec: B101
-

@@ -51,9 +51,7 @@ class AuthBypassDetector(BaseModule):
             if not baseline:
                 continue
             for header_set in AUTH_BYPASS_HEADERS:
-                resp = self.handler.get(
-                    candidate, allow_redirects=False, headers=header_set
-                )
+                resp = self.handler.get(candidate, allow_redirects=False, headers=header_set)
                 if resp and self._is_bypass(baseline.status_code, resp.status_code):
                     self.add_result(
                         severity="HIGH",
@@ -87,9 +85,7 @@ class AuthBypassDetector(BaseModule):
             if not baseline:
                 continue
             for header_set in AUTH_BYPASS_HEADERS:
-                resp = await self.handler.async_get(
-                    candidate, allow_redirects=False, headers=header_set
-                )
+                resp = await self.handler.async_get(candidate, allow_redirects=False, headers=header_set)
                 if resp and self._is_bypass(baseline.status_code, resp.status_code):
                     self.add_result(
                         severity="HIGH",

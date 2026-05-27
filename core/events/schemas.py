@@ -95,4 +95,3 @@ def validate_event_payload(event_type: str, payload: Any) -> Tuple[bool, str]:
     if missing:
         return False, f"missing required fields for {event_type}: {', '.join(missing)}"
     return True, ""
-

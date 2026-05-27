@@ -6,7 +6,7 @@ and URL-like parameters or common redirect/fetch parameters for Server-Side Requ
 
 import re
 import uuid
-from urllib.parse import parse_qs, urlparse, urlencode
+from urllib.parse import parse_qs, urlparse
 
 from core.request_handler import RequestHandler
 from core.verify.engine import VerificationEngine
@@ -30,9 +30,30 @@ class IDORDetector(BaseModule):
 
         # Common parameters that often lead to SSRF
         self.ssrf_params = {
-            "url", "uri", "path", "dest", "destination", "redirect", "to", "link",
-            "callback", "webhook", "feed", "site", "domain", "host", "ip", "file",
-            "img", "image", "src", "source", "load", "fetch", "request", "req"
+            "url",
+            "uri",
+            "path",
+            "dest",
+            "destination",
+            "redirect",
+            "to",
+            "link",
+            "callback",
+            "webhook",
+            "feed",
+            "site",
+            "domain",
+            "host",
+            "ip",
+            "file",
+            "img",
+            "image",
+            "src",
+            "source",
+            "load",
+            "fetch",
+            "request",
+            "req",
         }
 
         # SSRF Payloads
@@ -41,33 +62,33 @@ class IDORDetector(BaseModule):
                 "url": "http://httpbin.org/status/418",
                 "signature": "teapot",
                 "desc": "External Canary (httpbin status 418)",
-                "severity": "CRITICAL"
+                "severity": "CRITICAL",
             },
             {
                 "url": "http://169.254.169.254/latest/meta-data/",
                 "signature": "ami-id",
                 "desc": "Cloud Metadata Endpoint (AWS/OpenStack)",
-                "severity": "CRITICAL"
+                "severity": "CRITICAL",
             },
             {
                 "url": "http://127.0.0.1:80/",
-                "signature": None, # checked via response status and anomalies
+                "signature": None,  # checked via response status and anomalies
                 "desc": "Localhost Port 80 Probing",
-                "severity": "HIGH"
-            }
+                "severity": "HIGH",
+            },
         ]
 
     def run(self, target: str, verbose: bool = False, **kwargs):
         self.clear_results()
         if not target.startswith(("http://", "https://")):
             target = f"http://{target}"
-        
+
         # 1. Run IDOR checks
         self._run_idor_sync(target)
-        
+
         # 2. Run SSRF checks
         self._run_ssrf_sync(target)
-        
+
         # Guarantee at least an INFO finding if none found
         if not self.get_results():
             self.add_result(
@@ -75,20 +96,20 @@ class IDORDetector(BaseModule):
                 finding="No obvious IDOR or SSRF behavior detected",
                 details="No successful object-reference or server-side request anomalies found",
             )
-            
+
         return {"module": self.name, "target": target, "findings": self.get_results()}
 
     async def run_async(self, target: str, verbose: bool = False, **kwargs):
         self.clear_results()
         if not target.startswith(("http://", "https://")):
             target = f"http://{target}"
-        
+
         # 1. Run IDOR checks
         await self._run_idor_async(target)
-        
+
         # 2. Run SSRF checks
         await self._run_ssrf_async(target)
-        
+
         # Guarantee at least an INFO finding if none found
         if not self.get_results():
             self.add_result(
@@ -96,7 +117,7 @@ class IDORDetector(BaseModule):
                 finding="No obvious IDOR or SSRF behavior detected",
                 details="No successful object-reference or server-side request anomalies found",
             )
-            
+
         return {"module": self.name, "target": target, "findings": self.get_results()}
 
     def _extract_candidate_params(self, target: str):
@@ -222,7 +243,11 @@ class IDORDetector(BaseModule):
         for key, vals in params.items():
             value = vals[0] if vals else ""
             # If name matches SSRF common params, or the value starts with HTTP(S) protocol or contains dynamic paths
-            if key.lower() in self.ssrf_params or value.startswith(("http://", "https://")) or re.search(r"\.[a-zA-Z]{2,6}/", value):
+            if (
+                key.lower() in self.ssrf_params
+                or value.startswith(("http://", "https://"))
+                or re.search(r"\.[a-zA-Z]{2,6}/", value)
+            ):
                 candidates.append(key)
         return candidates
 
@@ -233,20 +258,20 @@ class IDORDetector(BaseModule):
 
         parsed = urlparse(target)
         base_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
-        
+
         for param in candidates:
             for payload in self.ssrf_payloads:
                 payload_params = parse_qs(parsed.query)
                 payload_params[param] = [payload["url"]]
                 flat_params = {k: v[-1] for k, v in payload_params.items()}
-                
+
                 resp = self.handler.get(base_url, params=flat_params)
                 if not resp:
                     continue
-                
+
                 is_vuln = False
                 ev = ""
-                
+
                 # Check for explicit signature in response text
                 if payload["signature"] and payload["signature"].lower() in resp.text.lower():
                     is_vuln = True
@@ -255,7 +280,7 @@ class IDORDetector(BaseModule):
                 elif payload["url"] == "http://httpbin.org/status/418" and resp.status_code == 418:
                     is_vuln = True
                     ev = "Server returned explicit HTTP 418 status code, indicating it successfully connected and forwarded the response from the external canary URL."
-                
+
                 if is_vuln:
                     self.add_result(
                         severity=payload["severity"],
@@ -266,7 +291,7 @@ class IDORDetector(BaseModule):
                         verified=True,
                         parameter=param,
                         evidence=resp.text[:500],
-                        tags=["A01:2026", "ssrf", "owasp"]
+                        tags=["A01:2026", "ssrf", "owasp"],
                     )
                     break
 
@@ -277,27 +302,27 @@ class IDORDetector(BaseModule):
 
         parsed = urlparse(target)
         base_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
-        
+
         for param in candidates:
             for payload in self.ssrf_payloads:
                 payload_params = parse_qs(parsed.query)
                 payload_params[param] = [payload["url"]]
                 flat_params = {k: v[-1] for k, v in payload_params.items()}
-                
+
                 resp = await self.handler.async_get(base_url, params=flat_params)
                 if not resp:
                     continue
-                
+
                 is_vuln = False
                 ev = ""
-                
+
                 if payload["signature"] and payload["signature"].lower() in resp.text.lower():
                     is_vuln = True
                     ev = f"Response body contains direct confirmation signature '{payload['signature']}' from remote request."
                 elif payload["url"] == "http://httpbin.org/status/418" and resp.status_code == 418:
                     is_vuln = True
                     ev = "Server returned explicit HTTP 418 status code, indicating it successfully connected and forwarded the response from the external canary URL."
-                
+
                 if is_vuln:
                     self.add_result(
                         severity=payload["severity"],
@@ -308,6 +333,6 @@ class IDORDetector(BaseModule):
                         verified=True,
                         parameter=param,
                         evidence=resp.text[:500],
-                        tags=["A01:2026", "ssrf", "owasp"]
+                        tags=["A01:2026", "ssrf", "owasp"],
                     )
                     break

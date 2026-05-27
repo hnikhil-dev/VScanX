@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, DefaultDict, List, Optional
+from typing import Any, Awaitable, Callable, DefaultDict, List
 
 from core.events.schemas import validate_event_payload
 
@@ -80,7 +79,6 @@ class EventBus:
             if self.strict:
                 raise ValueError(f"Event payload invalid for {event_type}: {err}")
         self.published_events += 1
-        loop = asyncio.get_running_loop()
         for h in self._subs.get(event_type, []):
             try:
                 res = h(event_type, payload)
@@ -88,4 +86,3 @@ class EventBus:
                     await res
             except Exception:
                 continue
-

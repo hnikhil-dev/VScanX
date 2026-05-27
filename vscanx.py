@@ -11,9 +11,7 @@ import sys
 import warnings
 from datetime import datetime
 
-# Silence noisy third-party python warnings (e.g. from scapy/cryptography)
-warnings.filterwarnings("ignore")
-
+from core.cli_reporter import CLIReporter
 from core.config import (
     DEFAULT_DELAY,
     DEFENSIVE_VARIANTS_DEFAULT_ENABLED,
@@ -21,12 +19,14 @@ from core.config import (
     SCAN_PROFILES,
     VERSION,
 )
+from core.console import DIM, RESET, print_banner, print_legal_warning, print_summary
 from core.logging_config import setup_logging_with_file
-from core.console import print_banner, print_legal_warning, print_summary, DIM, RESET
-from core.cli_reporter import CLIReporter
 from core.orchestrator import Orchestrator
 from reporting.export_formats import ExportHandler
 from reporting.report_generator import ReportGenerator
+
+# Silence noisy third-party python warnings (e.g. from scapy/cryptography)
+warnings.filterwarnings("ignore")
 
 # Global verbose flag
 VERBOSE = False
@@ -52,9 +52,7 @@ def list_profiles():
     for profile_name, profile_config in SCAN_PROFILES.items():
         print(f"\n{profile_name.upper()}:")
         print(f"  Description: {profile_config['description']}")
-        print(
-            f"  Port Range: {profile_config['port_range'][0]}-{profile_config['port_range'][1]}"
-        )
+        print(f"  Port Range: {profile_config['port_range'][0]}-{profile_config['port_range'][1]}")
         print(f"  Threads: {profile_config['max_threads']}")
         print(f"  Delay: {profile_config['delay']}s")
 
@@ -118,9 +116,7 @@ Examples:
         default=None,
     )
 
-    parser.add_argument(
-        "-p", "--ports", help="Port range for network scan (e.g., 1-1024)", default=None
-    )
+    parser.add_argument("-p", "--ports", help="Port range for network scan (e.g., 1-1024)", default=None)
 
     parser.add_argument(
         "--profile",
@@ -146,7 +142,10 @@ Examples:
     parser.add_argument(
         "--replay-verify",
         action="store_true",
-        help="Replay verification only for a saved scan (requires --scan-id). Updates verification_state/confidence from reproduction contracts.",
+        help=(
+            "Replay verification only for a saved scan (requires --scan-id). "
+            "Updates verification_state/confidence from reproduction contracts."
+        ),
     )
     parser.add_argument(
         "--diff",
@@ -198,14 +197,10 @@ Examples:
         default="html",
     )
 
-    parser.add_argument(
-        "--no-report", action="store_true", help="Skip report generation"
-    )
+    parser.add_argument("--no-report", action="store_true", help="Skip report generation")
 
     # Verbosity
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose output"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
 
     # Threading
     parser.add_argument(
@@ -221,12 +216,8 @@ Examples:
     )
 
     # Logging / diagnostics
-    parser.add_argument(
-        "--log-file", type=str, help="Path to write JSONL logs (optional)"
-    )
-    parser.add_argument(
-        "--scan-id", type=str, help="Identifier to correlate logs/artifacts (optional)"
-    )
+    parser.add_argument("--log-file", type=str, help="Path to write JSONL logs (optional)")
+    parser.add_argument("--scan-id", type=str, help="Identifier to correlate logs/artifacts (optional)")
     parser.add_argument(
         "--debug-capture",
         action="store_true",
@@ -290,9 +281,7 @@ Examples:
         type=str,
         help='Custom auth data as JSON (e.g., {"user":"admin","pass":"secret"})',
     )
-    auth_group.add_argument(
-        "--bearer-token", type=str, help="Bearer token for API authentication"
-    )
+    auth_group.add_argument("--bearer-token", type=str, help="Bearer token for API authentication")
     auth_group.add_argument("--api-key", type=str, help="API key for authentication")
     auth_group.add_argument(
         "--api-key-header",
@@ -301,9 +290,7 @@ Examples:
         help="Header name for API key (default: X-API-Key)",
     )
     auth_group.add_argument("--session-file", type=str, help="Load session from file")
-    auth_group.add_argument(
-        "--save-session", type=str, help="Save authenticated session to file"
-    )
+    auth_group.add_argument("--save-session", type=str, help="Save authenticated session to file")
     auth_group.add_argument(
         "--success-indicator",
         type=str,
@@ -319,9 +306,7 @@ def main():
     args = parser.parse_args()
 
     # Configure logging early
-    setup_logging_with_file(
-        logging.DEBUG if args.verbose else logging.INFO, log_path=args.log_file
-    )
+    setup_logging_with_file(logging.DEBUG if args.verbose else logging.INFO, log_path=args.log_file)
     log = logging.getLogger("vscanx.cli")
 
     # List profiles if requested
@@ -334,8 +319,8 @@ def main():
         if not args.scan_id or not args.scan_id2:
             log.error("--diff requires --scan-id and --scan-id2")
             return
-        from core.state.store import ScanStateStore
         from core.state.diff import diff_scan_results
+        from core.state.store import ScanStateStore
 
         store = ScanStateStore(root_dir=str(args.state_dir))
         a = store.load(str(args.scan_id), "results")
@@ -398,11 +383,7 @@ def main():
         gen = ReportGenerator(output_dir="reports")
         exporter = ExportHandler()
 
-        export_formats = (
-            [fmt.strip().lower() for fmt in args.format.split(",")]
-            if args.format
-            else ["html"]
-        )
+        export_formats = [fmt.strip().lower() for fmt in args.format.split(",")] if args.format else ["html"]
         export_formats = [fmt for fmt in export_formats if fmt]
 
         if args.no_report:
@@ -426,9 +407,9 @@ def main():
         if not args.scan_id:
             log.error("--replay-verify requires --scan-id")
             return
-        from core.state.store import ScanStateStore
-        from core.state.reverify import reverify_results
         from core.request_handler import RequestHandler
+        from core.state.reverify import reverify_results
+        from core.state.store import ScanStateStore
 
         store = ScanStateStore(root_dir=str(args.state_dir))
         loaded = store.load(str(args.scan_id), "results")
@@ -479,11 +460,7 @@ def main():
 
         gen = ReportGenerator(output_dir="reports")
         exporter = ExportHandler()
-        export_formats = (
-            [fmt.strip().lower() for fmt in args.format.split(",")]
-            if args.format
-            else ["html"]
-        )
+        export_formats = [fmt.strip().lower() for fmt in args.format.split(",")] if args.format else ["html"]
         export_formats = [fmt for fmt in export_formats if fmt]
 
         if "html" in export_formats:
@@ -557,9 +534,7 @@ def main():
 
                 credentials = {"username": args.username, "password": args.password}
 
-            success = auth_handler.login(
-                args.login_url, credentials, success_indicator=args.success_indicator
-            )
+            success = auth_handler.login(args.login_url, credentials, success_indicator=args.success_indicator)
 
             if not success:
                 log.error("Authentication failed. Exiting.")
@@ -615,28 +590,53 @@ def main():
     if args.only:
         only_modules = [m.strip().lower() for m in args.only.split(",")]
         # Disable all checks
-        for key in ["check_directories", "check_headers", "check_cve", 
-                    "check_rate_limit", "check_tech_fingerprint", "check_idor",
-                    "check_auth_bypass", "check_hpp", "check_js_secrets",
-                    "check_subdomain_recon", "check_open_redirect", "check_xss", "check_sqli",
-                    "check_crypto_tls", "check_cmd_injection", "check_error_handling"]:
+        for key in [
+            "check_directories",
+            "check_headers",
+            "check_cve",
+            "check_rate_limit",
+            "check_tech_fingerprint",
+            "check_idor",
+            "check_auth_bypass",
+            "check_hpp",
+            "check_js_secrets",
+            "check_subdomain_recon",
+            "check_open_redirect",
+            "check_xss",
+            "check_sqli",
+            "check_crypto_tls",
+            "check_cmd_injection",
+            "check_error_handling",
+        ]:
             profile_config[key] = False
-        
+
         # Turn off selective scanning so it doesn't arbitrarily skip explicitly requested modules
         profile_config["selective_scanning"] = False
-        
+
         # Enable specified ones
         module_map = {
-            "dir": "check_directories", "dir_enum": "check_directories",
-            "headers": "check_headers", "cve": "check_cve",
-            "rate_limit": "check_rate_limit", "tech": "check_tech_fingerprint",
-            "idor": "check_idor", "auth": "check_auth_bypass", "hpp": "check_hpp",
-            "secrets": "check_js_secrets", "subdomain": "check_subdomain_recon",
-            "redirect": "check_open_redirect", "sqli": "check_sqli", "xss": "check_xss",
-            "sql": "check_sqli", "sqlinjection": "check_sqli",
-            "crypto": "check_crypto_tls", "tls": "check_crypto_tls",
-            "cmd_injection": "check_cmd_injection", "cmd": "check_cmd_injection",
-            "error_handling": "check_error_handling", "error": "check_error_handling"
+            "dir": "check_directories",
+            "dir_enum": "check_directories",
+            "headers": "check_headers",
+            "cve": "check_cve",
+            "rate_limit": "check_rate_limit",
+            "tech": "check_tech_fingerprint",
+            "idor": "check_idor",
+            "auth": "check_auth_bypass",
+            "hpp": "check_hpp",
+            "secrets": "check_js_secrets",
+            "subdomain": "check_subdomain_recon",
+            "redirect": "check_open_redirect",
+            "sqli": "check_sqli",
+            "xss": "check_xss",
+            "sql": "check_sqli",
+            "sqlinjection": "check_sqli",
+            "crypto": "check_crypto_tls",
+            "tls": "check_crypto_tls",
+            "cmd_injection": "check_cmd_injection",
+            "cmd": "check_cmd_injection",
+            "error_handling": "check_error_handling",
+            "error": "check_error_handling",
         }
         for mod in only_modules:
             if mod in module_map:
@@ -646,11 +646,7 @@ def main():
                 log.warning("Unknown module in --only: %s", mod)
 
     # Set export formats (support comma-separated with spaces)
-    export_formats = (
-        [fmt.strip().lower() for fmt in args.format.split(",")]
-        if args.format
-        else ["html"]
-    )
+    export_formats = [fmt.strip().lower() for fmt in args.format.split(",")] if args.format else ["html"]
     export_formats = [fmt for fmt in export_formats if fmt]
     log.info("Export formats: %s", ", ".join(export_formats))
 
@@ -666,9 +662,7 @@ def main():
     orchestrator = Orchestrator(
         custom_xss_payloads=args.xss_payload,
         custom_sqli_payloads=args.sqli_payload,
-        max_threads=(
-            args.threads if args.threads else profile_config.get("max_threads", 10)
-        ),
+        max_threads=(args.threads if args.threads else profile_config.get("max_threads", 10)),
         delay=args.delay if args.delay else profile_config.get("delay", 1.0),
         verbose=VERBOSE,
         auth_handler=auth_handler,
@@ -691,7 +685,7 @@ def main():
     )
 
     # Initialize CLI reporter to catch and style output events
-    reporter = CLIReporter(orchestrator.event_bus)
+    _reporter = CLIReporter(orchestrator.event_bus)
 
     # Trigger scan.started event
     try:
@@ -704,7 +698,7 @@ def main():
                 "delay": args.delay if args.delay else profile_config.get("delay", 1.0),
                 "profile_name": args.profile,
                 "profile_desc": profile_config.get("description"),
-            }
+            },
         )
     except Exception:
         pass
@@ -732,9 +726,7 @@ def main():
     # Add metadata to summary for reports (ensure keys exist)
     summary["target"] = summary.get("target", args.target)
     summary["scan_type"] = summary.get("scan_type", args.scan_type).upper()
-    summary["start_time"] = summary.get(
-        "start_time", datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    )
+    summary["start_time"] = summary.get("start_time", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     summary["duration"] = summary.get("duration", results.get("duration", 0))
 
     # Skip report generation if requested
@@ -756,11 +748,7 @@ def main():
     import re
 
     safe_host = re.sub(r"[^A-Za-z0-9._-]+", "_", str(host_part))
-    base_filename = (
-        args.output
-        if args.output
-        else f"vscanx_{safe_host}_{args.scan_type}_{timestamp}"
-    )
+    base_filename = args.output if args.output else f"vscanx_{safe_host}_{args.scan_type}_{timestamp}"
 
     print(f"\n{DIM}[*] Generating reports with base name: {base_filename}{RESET}")
 
@@ -773,14 +761,10 @@ def main():
         fmt = fmt.lower()
         try:
             if fmt == "html":
-                html_path = generator.generate_html_report(
-                    results, summary, base_filename
-                )
+                html_path = generator.generate_html_report(results, summary, base_filename)
                 generated_reports.append(html_path)
             elif fmt == "pdf":
-                pdf_path = generator.generate_pdf_report(
-                    results, summary, base_filename
-                )
+                pdf_path = generator.generate_pdf_report(results, summary, base_filename)
                 if pdf_path:
                     generated_reports.append(pdf_path)
             elif fmt == "json":
@@ -823,6 +807,7 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        from core.console import RED, BOLD, RESET
+        from core.console import BOLD, RED, RESET
+
         print(f"\n{RED}{BOLD}[!] Scan aborted by user (Ctrl+C). Exiting...{RESET}\n")
         sys.exit(130)

@@ -35,7 +35,10 @@ def test_eventbus_enrichment_updates_payload_dict():
 
 
 def test_canonical_finding_id_is_stable_for_same_fields():
-    f1 = Finding(module="M", severity="HIGH", description="D", endpoint="http://a", parameter="p", evidence={"summary": "e"})
-    f2 = Finding(module="M", severity="HIGH", description="D", endpoint="http://a", parameter="p", evidence={"summary": "e"})
+    f1 = Finding(
+        module="M", severity="HIGH", description="D", endpoint="http://a", parameter="p", evidence={"summary": "e"}
+    )
+    f2 = Finding(
+        module="M", severity="HIGH", description="D", endpoint="http://a", parameter="p", evidence={"summary": "e"}
+    )
     assert f1.finding_id == f2.finding_id  # nosec: B101
-

@@ -35,9 +35,7 @@ class TechFingerprinter(BaseModule):
             "findings": self.get_results(),
         }
 
-    async def run_async(
-        self, target: str, verbose: bool = False, **kwargs
-    ) -> Dict[str, Any]:
+    async def run_async(self, target: str, verbose: bool = False, **kwargs) -> Dict[str, Any]:
         self.clear_results()
         if not target.startswith(("http://", "https://")):
             target = f"http://{target}"
@@ -67,17 +65,11 @@ class TechFingerprinter(BaseModule):
             for name, pattern in mapping.items():
                 if re.search(pattern, haystack, flags=re.IGNORECASE):
                     detected[group].append(name)
-        is_static = (
-            len(detected["frameworks"]) == 0
-            and len(detected["cms"]) == 0
-            and "<?php" not in body.lower()
-        )
+        is_static = len(detected["frameworks"]) == 0 and len(detected["cms"]) == 0 and "<?php" not in body.lower()
         return {
             "detected": detected,
             "is_likely_static": is_static,
-            "response_headers_seen": [
-                h for h in ["Server", "X-Powered-By", "X-Generator"] if headers.get(h)
-            ],
+            "response_headers_seen": [h for h in ["Server", "X-Powered-By", "X-Generator"] if headers.get(h)],
         }
 
     def _emit_findings(self, profile: Dict[str, Any]) -> None:

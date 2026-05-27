@@ -142,9 +142,7 @@ def main():
     print("\nPhase 2 features are ready!")
     print("\nNext steps:")
     print("1. Test with: python vscanx.py --list-profiles")
-    print(
-        "2. Run quick scan: python vscanx.py -t http://127.0.0.1:8080 --profile quick"
-    )
+    print("2. Run quick scan: python vscanx.py -t http://127.0.0.1:8080 --profile quick")
     print("3. Full scan: python vscanx.py -t http://127.0.0.1:8080 --profile full -v")
     print()
 

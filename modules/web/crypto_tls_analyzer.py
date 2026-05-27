@@ -15,7 +15,9 @@ class CryptoTLSAnalyzer(BaseModule):
     def __init__(self, handler=None):
         super().__init__()
         self.name = "Crypto and TLS Analyzer"
-        self.description = "Analyzes transport encryption, SSL/TLS configurations, and certificate issues (OWASP A04:2026)"
+        self.description = (
+            "Analyzes transport encryption, SSL/TLS configurations, and certificate issues (OWASP A04:2026)"
+        )
         self.version = "1.0.0"
         self.handler = handler if handler else RequestHandler()
         self.request_cost = 2
@@ -27,12 +29,12 @@ class CryptoTLSAnalyzer(BaseModule):
         self.clear_results()
         if not target.startswith(("http://", "https://")):
             target = f"http://{target}"
-            
+
         parsed = urlparse(target)
         scheme = parsed.scheme
         hostname = parsed.hostname
         port = parsed.port or (443 if scheme == "https" else 80)
-        
+
         # 1. Plaintext HTTP Check
         if scheme == "http":
             self.add_result(
@@ -42,21 +44,21 @@ class CryptoTLSAnalyzer(BaseModule):
                 remediation="Configure the server to redirect all HTTP traffic to HTTPS and use TLS 1.2 or TLS 1.3.",
                 confidence="HIGH",
                 verified=True,
-                tags=["A04:2026", "cryptography", "tls"]
+                tags=["A04:2026", "cryptography", "tls"],
             )
             return {"module": self.name, "target": target, "findings": self.get_results()}
-            
+
         # 2. HSTS and TLS Check
         self._analyze_tls(hostname, port)
         self._analyze_hsts(target)
-        
+
         if not self.get_results():
             self.add_result(
                 severity="INFO",
                 finding="Secure TLS Configuration Detected",
                 details="SSL/TLS transport uses robust configurations and valid certificates.",
             )
-            
+
         return {"module": self.name, "target": target, "findings": self.get_results()}
 
     async def run_async(self, target: str, **kwargs):
@@ -65,12 +67,13 @@ class CryptoTLSAnalyzer(BaseModule):
 
     async def run_async_wrapper(self, target: str, **kwargs):
         import asyncio
+
         return await asyncio.to_thread(self.run, target, **kwargs)
 
     def _analyze_tls(self, hostname: str, port: int):
         if not hostname:
             return
-            
+
         # Check standard TLS connection
         context = ssl.create_default_context()
         try:
@@ -78,8 +81,8 @@ class CryptoTLSAnalyzer(BaseModule):
                 with context.wrap_socket(sock, server_hostname=hostname) as ssock:
                     cipher = ssock.cipher()
                     version = ssock.version()
-                    cert = ssock.getpeercert()
-                    
+                    _cert = ssock.getpeercert()
+
                     # Log security specs
                     if cipher:
                         cipher_name, cipher_ver, cipher_bits = cipher
@@ -90,9 +93,9 @@ class CryptoTLSAnalyzer(BaseModule):
                                 details=f"Connection negotiated with weak cipher {cipher_name} ({cipher_bits} bits).",
                                 remediation="Disable support for cipher suites with key sizes less than 128 bits.",
                                 confidence="HIGH",
-                                tags=["A04:2026", "cryptography"]
+                                tags=["A04:2026", "cryptography"],
                             )
-                            
+
                     # Deprecated protocol version check
                     if version in ["TLSv1", "TLSv1.1", "SSLv3", "SSLv2"]:
                         self.add_result(
@@ -101,7 +104,7 @@ class CryptoTLSAnalyzer(BaseModule):
                             details=f"The server allows connections using {version}, which contains known cryptographic flaws.",
                             remediation="Disable support for SSLv2, SSLv3, TLS 1.0, and TLS 1.1. Only allow TLS 1.2 and TLS 1.3.",
                             confidence="HIGH",
-                            tags=["A04:2026", "tls"]
+                            tags=["A04:2026", "tls"],
                         )
         except ssl.SSLCertVerificationError as e:
             self.add_result(
@@ -111,9 +114,9 @@ class CryptoTLSAnalyzer(BaseModule):
                 remediation="Install a valid SSL certificate signed by a trusted Certificate Authority (CA).",
                 confidence="HIGH",
                 verified=True,
-                tags=["A04:2026", "tls"]
+                tags=["A04:2026", "tls"],
             )
-        except Exception as e:
+        except Exception:
             # General connection failure or timeout
             pass
 
@@ -121,7 +124,7 @@ class CryptoTLSAnalyzer(BaseModule):
         resp = self.handler.get(target)
         if not resp:
             return
-            
+
         hsts = resp.headers.get("Strict-Transport-Security")
         if not hsts:
             self.add_result(
@@ -130,7 +133,7 @@ class CryptoTLSAnalyzer(BaseModule):
                 details="The server does not send the Strict-Transport-Security header on HTTPS responses, leaving it open to SSL stripping attacks.",
                 remediation="Add the 'Strict-Transport-Security: max-age=31536000; includeSubDomains' header to all HTTPS responses.",
                 confidence="HIGH",
-                tags=["A04:2026", "hsts", "headers"]
+                tags=["A04:2026", "hsts", "headers"],
             )
         else:
             if "max-age=0" in hsts:
@@ -140,5 +143,5 @@ class CryptoTLSAnalyzer(BaseModule):
                     details="Strict-Transport-Security header is present but disabled with max-age=0.",
                     remediation="Set the Strict-Transport-Security max-age directive to at least 31536000 seconds (1 year).",
                     confidence="HIGH",
-                    tags=["A04:2026", "hsts"]
+                    tags=["A04:2026", "hsts"],
                 )

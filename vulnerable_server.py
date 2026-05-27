@@ -10,7 +10,6 @@ from urllib.parse import parse_qs, urlparse
 
 
 class VulnerableHandler(BaseHTTPRequestHandler):
-
     def do_GET(self):
         """Handle GET requests"""
         parsed_path = urlparse(self.path)

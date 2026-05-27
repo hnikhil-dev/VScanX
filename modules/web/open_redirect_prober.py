@@ -84,9 +84,7 @@ class OpenRedirectProber(BaseModule):
             if not resp:
                 continue
             location = resp.headers.get("Location", "")
-            if resp.status_code in [301, 302, 303, 307, 308] and self._is_external_location(
-                location, parsed.netloc
-            ):
+            if resp.status_code in [301, 302, 303, 307, 308] and self._is_external_location(location, parsed.netloc):
                 vulnerable += 1
                 # Negative control: redirect to same-host path (should not become external)
                 neg = dict(qs)
@@ -143,9 +141,7 @@ class OpenRedirectProber(BaseModule):
             if not resp:
                 continue
             location = resp.headers.get("Location", "")
-            if resp.status_code in [301, 302, 303, 307, 308] and self._is_external_location(
-                location, parsed.netloc
-            ):
+            if resp.status_code in [301, 302, 303, 307, 308] and self._is_external_location(location, parsed.netloc):
                 vulnerable += 1
                 neg = dict(qs)
                 neg[key] = ["/"]
@@ -183,4 +179,3 @@ class OpenRedirectProber(BaseModule):
                 details="Tested redirect-like parameters did not redirect externally",
             )
         return {"tested_params": len(params), "vulnerable_params": vulnerable}
-

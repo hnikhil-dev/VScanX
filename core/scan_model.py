@@ -19,9 +19,7 @@ class Finding:
     verification: Dict[str, Any] = field(default_factory=dict)
     reproduction: Dict[str, Any] = field(default_factory=dict)
     tags: List[str] = field(default_factory=list)
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     first_seen_at: str = ""
     last_seen_at: str = ""
     enrichment_history: List[Dict[str, Any]] = field(default_factory=list)

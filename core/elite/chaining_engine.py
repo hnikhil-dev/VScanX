@@ -78,4 +78,3 @@ class VulnerabilityChainingEngine:
         # De-duplicate by title
         uniq: Dict[str, Chain] = {c.title: c for c in chains}
         return list(uniq.values())
-

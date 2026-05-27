@@ -1,7 +1,7 @@
 {
   "target": "http://example.local",
   "scan_type": "web",
-  "start_time": "2026-05-27T16:10:32.874516",
+  "start_time": "2026-05-27T17:47:30.868762",
   "duration": 0.5,
   "authenticated": false,
   "errors": [],
@@ -17,8 +17,8 @@
   "modules": [
     {
       "module": "XSS Detector",
-      "start_time": "2026-05-27T16:10:32.874526",
-      "end_time": "2026-05-27T16:10:32.874527"
+      "start_time": "2026-05-27T17:47:30.868772",
+      "end_time": "2026-05-27T17:47:30.868774"
     }
   ]
 }

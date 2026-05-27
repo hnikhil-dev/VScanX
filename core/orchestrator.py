@@ -3,18 +3,18 @@ VScanX Orchestrator (Phase 3 - With Authentication)
 Central coordinator for managing scan workflows with CVE checking and authentication
 """
 
+import asyncio
 import logging
 import platform
 import threading
-import asyncio
 import time
 from datetime import datetime
 from typing import Any, Dict, List
 
 from core.metrics import MetricsCollector
+from core.plugins.manager import PluginManager
 from core.request_handler import validate_target
 from core.state.store import ScanStateStore
-from core.plugins.manager import PluginManager
 
 logger = logging.getLogger("vscanx.orchestrator")
 
@@ -197,6 +197,7 @@ class Orchestrator:
         from core.events.bus import EventBus
 
         self.event_bus = EventBus(strict=bool(strict_events))
+
         # Default confidence/verification enrichment for findings.
         # This keeps unified schema consistent even when modules don't provide all fields.
         def _default_finding_enricher(_event_type: str, payload: Any) -> Dict[str, Any]:
@@ -304,9 +305,7 @@ class Orchestrator:
         self.scan_result = self._ScanResult(
             target=target,
             scan_type=scan_type,
-            authenticated=(
-                self.auth_handler.is_authenticated() if self.auth_handler else False
-            ),
+            authenticated=(self.auth_handler.is_authenticated() if self.auth_handler else False),
             start_time=datetime.now().isoformat(),
             findings=[],
             modules=[],
@@ -360,10 +359,7 @@ class Orchestrator:
 
         # Internal scan graph module (events captured by EventBus)
         try:
-            event_log = [
-                {"type": e.type, "ts": e.ts, "payload": e.payload}
-                for e in self.event_bus.get_event_log()
-            ]
+            event_log = [{"type": e.type, "ts": e.ts, "payload": e.payload} for e in self.event_bus.get_event_log()]
             # Summarize skip reasons from module.completed errors.
             skip_reasons: Dict[str, int] = {}
             for e in event_log:
@@ -484,15 +480,10 @@ class Orchestrator:
         self._add_module_result(
             {
                 "module": "Vulnerability Chaining Engine",
-                "findings": [
-                    {"severity": c.severity, "finding": c.title, "details": c.narrative}
-                    for c in chains
-                ],
+                "findings": [{"severity": c.severity, "finding": c.title, "details": c.narrative} for c in chains],
                 "artifacts": {
                     "chain_count": len(chains),
-                    "supporting_modules": sorted(
-                        {m for c in chains for m in c.supporting_modules}
-                    ),
+                    "supporting_modules": sorted({m for c in chains for m in c.supporting_modules}),
                 },
             }
         )
@@ -569,7 +560,7 @@ class Orchestrator:
                     result["duration"] = (end - start).total_seconds()
                 except Exception:
                     result["duration"] = 0.0
-            
+
             if "modules" not in self.results:
                 self.results["modules"] = []
             self.results["modules"].append(result)
@@ -587,9 +578,7 @@ class Orchestrator:
         if duration is not None:
             try:
                 module_meta["duration"] = float(duration)
-                self.metrics.observe_duration(
-                    f"module.{module_name}.seconds", float(duration)
-                )
+                self.metrics.observe_duration(f"module.{module_name}.seconds", float(duration))
             except (TypeError, ValueError):
                 logger.warning("invalid_module_duration", extra={"module": module_name})
         if "error" in result:
@@ -601,9 +590,7 @@ class Orchestrator:
         findings = result.get("findings", [])
         if not isinstance(findings, list):
             logger.error("module_findings_not_list", extra={"module": module_name})
-            self.scan_result.errors.append(
-                f"Module {module_name} returned invalid findings"
-            )
+            self.scan_result.errors.append(f"Module {module_name} returned invalid findings")
             return
 
         # Build a module-specific findings list (ensure keys exist and are safe to render)
@@ -611,9 +598,7 @@ class Orchestrator:
         for f in findings:
             try:
                 # Normalize severity and description
-                description = (
-                    f.get("finding") or f.get("description") or f.get("details") or ""
-                )
+                description = f.get("finding") or f.get("description") or f.get("details") or ""
                 severity = (f.get("severity") or "INFO").upper()
                 if severity not in ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]:
                     severity = "INFO"
@@ -664,7 +649,9 @@ class Orchestrator:
                     endpoint=str(normalized.get("endpoint", "")),
                     parameter=str(normalized.get("parameter", "")),
                     evidence=normalized.get("evidence", {}) or {},
-                    confidence=str(normalized.get("confidence", "")) if normalized.get("confidence") is not None else "",
+                    confidence=str(normalized.get("confidence", ""))
+                    if normalized.get("confidence") is not None
+                    else "",
                     verified=normalized.get("verified", None),
                     verification_state=str(normalized.get("verification_state", "UNVERIFIED")),
                     verification=normalized.get("verification", {}) or {},
@@ -713,12 +700,8 @@ class Orchestrator:
                 except Exception:
                     pass
             except Exception as e:
-                logger.exception(
-                    "Failed to normalize finding from %s: %s", module_name, e
-                )
-                self.scan_result.errors.append(
-                    f"Normalization error in module {module_name}: {e}"
-                )
+                logger.exception("Failed to normalize finding from %s: %s", module_name, e)
+                self.scan_result.errors.append(f"Normalization error in module {module_name}: {e}")
 
         # Attach normalized findings back to the module metadata for per-module rendering in templates
         module_meta["findings"] = module_findings
@@ -753,9 +736,7 @@ class Orchestrator:
                 parsed = urlparse(target)
 
                 # Extract hostname without port
-                hostname = (
-                    parsed.hostname if parsed.hostname else parsed.netloc.split(":")[0]
-                )
+                hostname = parsed.hostname if parsed.hostname else parsed.netloc.split(":")[0]
 
                 try:
                     target_ip = socket.gethostbyname(hostname)
@@ -780,19 +761,13 @@ class Orchestrator:
             scanner = self.modules["port_scan"]
             module_start = time.time()
             if port_range:
-                result = scanner.run(
-                    target_ip, port_range=port_range, verbose=self.verbose
-                )
+                result = scanner.run(target_ip, port_range=port_range, verbose=self.verbose)
             else:
                 result = scanner.run(target_ip, verbose=self.verbose)
             module_end = time.time()
             result.setdefault("module", "Port Scanner")
-            result.setdefault(
-                "start_time", datetime.fromtimestamp(module_start).isoformat()
-            )
-            result.setdefault(
-                "end_time", datetime.fromtimestamp(module_end).isoformat()
-            )
+            result.setdefault("start_time", datetime.fromtimestamp(module_start).isoformat())
+            result.setdefault("end_time", datetime.fromtimestamp(module_end).isoformat())
             result.setdefault("duration", round(module_end - module_start, 3))
             # Attach module spec into artifacts (if present) for UI/reporting.
             try:
@@ -809,9 +784,7 @@ class Orchestrator:
             logger.exception("Network scan error: %s", e)
             self._add_module_result({"module": "Port Scanner", "error": str(e)})
 
-    async def _execute_web_scans_async(
-        self, target: str, profile_config: Dict = None
-    ) -> None:
+    async def _execute_web_scans_async(self, target: str, profile_config: Dict = None) -> None:
         """
         Execute all web-based scans
 
@@ -935,21 +908,15 @@ class Orchestrator:
                 module_start = time.time()
                 if hasattr(runner, "run_async"):
                     if module_key == "dir_enum":
-                        result = await runner.run_async(
-                            target, verbose=self.verbose, recursive=dir_enum_recursive
-                        )
+                        result = await runner.run_async(target, verbose=self.verbose, recursive=dir_enum_recursive)
                     else:
                         result = await runner.run_async(target, verbose=self.verbose)
                 else:
                     result = await asyncio.to_thread(runner.run, target, self.verbose)
                 module_end = time.time()
                 result.setdefault("module", label)
-                result.setdefault(
-                    "start_time", datetime.fromtimestamp(module_start).isoformat()
-                )
-                result.setdefault(
-                    "end_time", datetime.fromtimestamp(module_end).isoformat()
-                )
+                result.setdefault("start_time", datetime.fromtimestamp(module_start).isoformat())
+                result.setdefault("end_time", datetime.fromtimestamp(module_end).isoformat())
                 result.setdefault("duration", round(module_end - module_start, 3))
                 # Attach module spec/requirements into artifacts for UI/reporting.
                 try:
@@ -1012,11 +979,7 @@ class Orchestrator:
         # Authenticated crawler (foundational): build URL inventory for better coverage
         crawl_artifacts: Dict[str, Any] = {}
         if run_crawler:
-            cached = (
-                self.state_store.load(self.scan_id or "default", "crawl")
-                if self.resume
-                else None
-            )
+            cached = self.state_store.load(self.scan_id or "default", "crawl") if self.resume else None
             if cached:
                 crawl_artifacts = cached
             else:
@@ -1149,7 +1112,15 @@ class Orchestrator:
         param_targets = list((crawl_artifacts.get("param_urls") or []))[:25]
         if param_targets:
             # Expand tasks by injecting per-URL runs for specific modules
-            param_module_keys = {"xss_detect", "sqli_detect", "idor_detector", "hpp_detector", "open_redirect_prober", "os_command_injection_detector", "error_handling_prober"}
+            param_module_keys = {
+                "xss_detect",
+                "sqli_detect",
+                "idor_detector",
+                "hpp_detector",
+                "open_redirect_prober",
+                "os_command_injection_detector",
+                "error_handling_prober",
+            }
             expanded = []
             for key, label in tasks:
                 if key in param_module_keys:
@@ -1159,7 +1130,7 @@ class Orchestrator:
                     expanded.append((key, label, target))
             tasks_with_targets = expanded
         else:
-            tasks_with_targets = [(k, l, target) for k, l in tasks]
+            tasks_with_targets = [(key, lbl, target) for key, lbl in tasks]
 
         async def run_module_with_target(module_key: str, label: str, module_target: str):
             nonlocal target
@@ -1171,62 +1142,48 @@ class Orchestrator:
                 target = saved
 
         if self.parallel_modules and len(tasks_with_targets) > 1:
-            await asyncio.gather(
-                *(run_module_with_target(k, l, t) for k, l, t in tasks_with_targets)
-            )
+            await asyncio.gather(*(run_module_with_target(key, lbl, t) for key, lbl, t in tasks_with_targets))
         else:
             for key, label, t in tasks_with_targets:
                 await run_module_with_target(key, label, t)
 
-    async def _execute_web3_scans_async(
-        self, target: str, profile_config: Dict = None
-    ) -> None:
+    async def _execute_web3_scans_async(self, target: str, profile_config: Dict = None) -> None:
         """
         Execute all Web3/Smart Contract scans
         """
         logger.info("Executing Web3 Smart Contract Scan Modules")
-        
+
         web3_modules = [
             ("smart_contract_access_control_checker", "Smart Contract Access Control Checker"),
             ("smart_contract_reentrancy_analyzer", "Smart Contract Reentrancy Analyzer"),
-            ("smart_contract_weak_randomness_detector", "Smart Contract Weak Randomness Detector")
+            ("smart_contract_weak_randomness_detector", "Smart Contract Weak Randomness Detector"),
         ]
-        
+
         for module_key, label in web3_modules:
             runner = self.modules.get(module_key)
             if not runner:
                 continue
-            
+
             try:
                 self.event_bus.publish("module.started", {"module": label})
                 module_start = time.time()
-                
+
                 result = await runner.run_async(
-                    target,
-                    rpc_url=self.rpc_url,
-                    contract=self.contract,
-                    abi=self.abi,
-                    verbose=self.verbose
+                    target, rpc_url=self.rpc_url, contract=self.contract, abi=self.abi, verbose=self.verbose
                 )
-                
+
                 module_end = time.time()
                 result.setdefault("module", label)
-                result.setdefault(
-                    "start_time", datetime.fromtimestamp(module_start).isoformat()
-                )
-                result.setdefault(
-                    "end_time", datetime.fromtimestamp(module_end).isoformat()
-                )
+                result.setdefault("start_time", datetime.fromtimestamp(module_start).isoformat())
+                result.setdefault("end_time", datetime.fromtimestamp(module_end).isoformat())
                 result.setdefault("duration", round(module_end - module_start, 3))
-                
+
                 self._add_module_result(result)
             except Exception as e:
                 logger.exception("%s error: %s", label, e, extra=self._log_extra)
                 self._add_module_result({"module": label, "error": str(e)})
 
-    async def _execute_agentic_scans_async(
-        self, target: str, profile_config: Dict = None
-    ) -> None:
+    async def _execute_agentic_scans_async(self, target: str, profile_config: Dict = None) -> None:
         """
         Execute all Agentic (AI/LLM) applications security scans
         """
@@ -1236,7 +1193,7 @@ class Orchestrator:
             ("agentic_prompt_injection_fuzzer", "Agentic Prompt Injection Fuzzer"),
             ("agentic_code_execution_prober", "Agentic Code Execution Prober"),
             ("agentic_memory_poisoning_fuzzer", "Agentic Memory Poisoning Fuzzer"),
-            ("agentic_data_exfiltration_fuzzer", "Agentic Data Exfiltration Fuzzer")
+            ("agentic_data_exfiltration_fuzzer", "Agentic Data Exfiltration Fuzzer"),
         ]
 
         for module_key, label in agentic_modules:
@@ -1252,12 +1209,8 @@ class Orchestrator:
 
                 module_end = time.time()
                 result.setdefault("module", label)
-                result.setdefault(
-                    "start_time", datetime.fromtimestamp(module_start).isoformat()
-                )
-                result.setdefault(
-                    "end_time", datetime.fromtimestamp(module_end).isoformat()
-                )
+                result.setdefault("start_time", datetime.fromtimestamp(module_start).isoformat())
+                result.setdefault("end_time", datetime.fromtimestamp(module_end).isoformat())
                 result.setdefault("duration", round(module_end - module_start, 3))
 
                 self._add_module_result(result)
@@ -1288,9 +1241,7 @@ class Orchestrator:
         # Count findings from centralized list to avoid module mismatch
         for finding in self.scan_result.findings:
             summary["total_findings"] += 1
-            summary["by_module"][finding.module] = (
-                summary["by_module"].get(finding.module, 0) + 1
-            )
+            summary["by_module"][finding.module] = summary["by_module"].get(finding.module, 0) + 1
             severity = getattr(finding, "severity", "INFO")
             if severity in summary["by_severity"]:
                 summary["by_severity"][severity] += 1

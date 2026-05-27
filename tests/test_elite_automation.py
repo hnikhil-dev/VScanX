@@ -26,7 +26,13 @@ def test_poc_generator_outputs_commands():
     gen = PoCGenerator()
     pocs = gen.generate(
         target="http://example.local/login?next=https://example.org/",
-        findings=[{"module": "HTTP Headers Analyzer", "severity": "MEDIUM", "description": "Missing security header: Content-Security-Policy"}],
+        findings=[
+            {
+                "module": "HTTP Headers Analyzer",
+                "severity": "MEDIUM",
+                "description": "Missing security header: Content-Security-Policy",
+            }
+        ],
     )
     assert len(pocs) >= 1  # nosec: B101
 
@@ -58,4 +64,3 @@ def test_verification_engine_similarity_range():
     v = VerificationEngine()
     sim = v.similarity("abc", "abc")
     assert 0.99 <= sim <= 1.0  # nosec: B101
-

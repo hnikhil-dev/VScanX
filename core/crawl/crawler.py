@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections import deque
 from dataclasses import dataclass
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set
 from urllib.parse import parse_qs, urljoin, urlparse
 
 from core.crawl.html_extract import extract_from_html
@@ -57,6 +57,7 @@ class AuthenticatedCrawler:
         frontier = deque([{"url": start_url, "depth": 0}])
         max_frontier_len = 1
         skipped_reasons: Dict[str, int] = {}
+
         def _skip(reason: str) -> None:
             skipped_reasons[reason] = skipped_reasons.get(reason, 0) + 1
 
@@ -178,9 +179,7 @@ class AuthenticatedCrawler:
                             spafull = normalize_url(start_origin + route)
                             if same_origin(spafull, start_url) and spafull not in visited:
                                 if depth + 1 <= config.max_depth:
-                                    frontier.append(
-                                        {"url": spafull, "depth": depth + 1}
-                                    )
+                                    frontier.append({"url": spafull, "depth": depth + 1})
                 except Exception:
                     pass
 
@@ -213,9 +212,7 @@ class AuthenticatedCrawler:
             for r in sorted(js_routes):
                 if r not in visited and depth + 1 <= config.max_depth:
                     if len(frontier) < int(config.max_frontier):
-                        frontier.append(
-                            {"url": r, "depth": min(depth + 1, config.max_depth)}
-                        )
+                        frontier.append({"url": r, "depth": min(depth + 1, config.max_depth)})
                         max_frontier_len = max(max_frontier_len, len(frontier))
                     else:
                         _skip("frontier_full")
@@ -266,9 +263,7 @@ class AuthenticatedCrawler:
             "urls": sorted(visited)[:1000],
             "param_urls": sorted(param_urls)[:250],
             "param_names": sorted(discovered_param_names)[:200],
-            "params_by_url": {
-                k: v for k, v in list(params_by_url.items())[:250]
-            },
+            "params_by_url": {k: v for k, v in list(params_by_url.items())[:250]},
             "scripts": sorted(discovered_scripts)[:250],
             "forms": discovered_forms[:250],
             "api_endpoints": sorted(api_endpoints)[:250],
@@ -323,4 +318,3 @@ class AuthenticatedCrawler:
                 if same_origin(full, start_url):
                     expanded.add(full)
         return sorted(expanded)[:50]
-

@@ -3,8 +3,8 @@ VScanX Base Module
 Abstract base class for all scanner modules
 """
 
-from abc import ABC, abstractmethod
 import asyncio
+from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
 

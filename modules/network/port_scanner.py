@@ -28,9 +28,7 @@ class PortScanner(BaseModule):
         self.version = "1.0.0"
         self.open_ports = []
 
-    def run(
-        self, target: str, port_range: tuple = DEFAULT_PORT_RANGE, **kwargs
-    ) -> Dict[str, Any]:
+    def run(self, target: str, port_range: tuple = DEFAULT_PORT_RANGE, **kwargs) -> Dict[str, Any]:
         """
         Execute port scan on target
 

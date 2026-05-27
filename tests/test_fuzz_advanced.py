@@ -63,10 +63,7 @@ def test_sqli_payloads_fuzz(payload):
     error_text = f"SQL syntax error near '{payload[:10]}'"
     detector = SQLiDetector(handler=DummyHandler(FakeResponse(error_text, 500)))
     params = {"id": "1"}
-    assert (
-        detector._test_payload("http://example.com", params, "id", payload, 100, 200)
-        is True
-    )  # nosec: B101 - test assertion
+    assert detector._test_payload("http://example.com", params, "id", payload, 100, 200) is True  # nosec: B101 - test assertion
 
 
 @pytest.mark.parametrize(
@@ -92,13 +89,9 @@ def test_sqli_payloads_fuzz(payload):
 )
 def test_sqli_error_patterns(error_pattern):
     """Test SQLi error pattern detection"""
-    detector = SQLiDetector(
-        handler=DummyHandler(FakeResponse(f"Error: {error_pattern}", 500))
-    )
+    detector = SQLiDetector(handler=DummyHandler(FakeResponse(f"Error: {error_pattern}", 500)))
     params = {"q": "test"}
-    assert (
-        detector._test_payload("http://example.com", params, "q", "'", 100, 200) is True
-    )  # nosec: B101 - test assertion
+    assert detector._test_payload("http://example.com", params, "q", "'", 100, 200) is True  # nosec: B101 - test assertion
 
 
 def test_sqli_time_based_detection():
@@ -128,10 +121,7 @@ def test_sqli_boolean_based_true_false():
     baseline = 100
 
     # Should detect difference (200 vs 50 vs baseline 100)
-    assert (
-        detector._test_boolean_based("http://example.com", params, "id", baseline)
-        is True
-    )  # nosec: B101 - test assertion
+    assert detector._test_boolean_based("http://example.com", params, "id", baseline) is True  # nosec: B101 - test assertion
 
 
 def test_sqli_false_positive_reduction():
@@ -140,17 +130,12 @@ def test_sqli_false_positive_reduction():
     normal_resp = FakeResponse("A" * 100, 200)
     slight_variation = FakeResponse("A" * 105, 200)  # Only 5% difference
 
-    detector = SQLiDetector(
-        handler=DummyHandler(responses=[normal_resp, slight_variation])
-    )
+    detector = SQLiDetector(handler=DummyHandler(responses=[normal_resp, slight_variation]))
     params = {"id": "1"}
     baseline = 100
 
     # Should NOT detect (5% < 15% threshold)
-    assert (
-        detector._test_boolean_based("http://example.com", params, "id", baseline)
-        is False
-    )  # nosec: B101 - test assertion
+    assert detector._test_boolean_based("http://example.com", params, "id", baseline) is False  # nosec: B101 - test assertion
 
 
 # XSS Fuzz Tests
@@ -176,14 +161,9 @@ def test_sqli_false_positive_reduction():
 )
 def test_xss_payloads_fuzz(payload):
     """Test various XSS payloads trigger detection"""
-    detector = XSSDetector(
-        handler=DummyHandler(FakeResponse(f"Hello {payload} World", 200))
-    )
+    detector = XSSDetector(handler=DummyHandler(FakeResponse(f"Hello {payload} World", 200)))
     params = {"q": "test"}
-    assert (
-        detector._test_payload("http://example.com", params, "q", payload, 100, 200)
-        is True
-    )  # nosec: B101 - test assertion
+    assert detector._test_payload("http://example.com", params, "q", payload, 100, 200) is True  # nosec: B101 - test assertion
 
 
 @pytest.mark.parametrize(
@@ -331,9 +311,7 @@ def test_header_analyzer_info_disclosure():
 
     results = analyzer.get_results()
     # Should have LOW severity findings for info disclosure
-    info_disclosure = [
-        r for r in results if "Information disclosure" in r.get("finding", "")
-    ]
+    info_disclosure = [r for r in results if "Information disclosure" in r.get("finding", "")]
     assert len(info_disclosure) >= 1
     assert all(r.get("severity") == "LOW" for r in info_disclosure)
 
@@ -382,9 +360,7 @@ def test_large_response_handling():
     params = {"q": "test"}
 
     # Should not crash or hang
-    result = detector._test_payload(
-        "http://example.com", params, "q", "<script>alert(1)</script>", 100, 200
-    )
+    result = detector._test_payload("http://example.com", params, "q", "<script>alert(1)</script>", 100, 200)
     assert isinstance(result, bool)  # nosec: B101 - test assertion
 
 
@@ -404,9 +380,7 @@ def test_special_characters_in_payloads():
         detector = SQLiDetector(handler=DummyHandler(FakeResponse("OK", 200)))
         params = {"q": "test"}
         try:
-            result = detector._test_payload(
-                "http://example.com", params, "q", payload, 100, 200
-            )
+            result = detector._test_payload("http://example.com", params, "q", payload, 100, 200)
             assert isinstance(result, bool)  # nosec: B101 - test assertion
         except Exception as e:
             # Some may raise, but should be handled gracefully

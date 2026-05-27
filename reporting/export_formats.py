@@ -99,24 +99,18 @@ class ExportHandler:
         # Write CSV
         with open(output_path, "w", newline="", encoding="utf-8") as f:
             if findings:
-                writer = csv.DictWriter(
-                    f, fieldnames=["Module", "Severity", "Finding", "Details"]
-                )
+                writer = csv.DictWriter(f, fieldnames=["Module", "Severity", "Finding", "Details"])
                 writer.writeheader()
                 writer.writerows(findings)
             else:
                 # Empty CSV with headers
-                writer = csv.DictWriter(
-                    f, fieldnames=["Module", "Severity", "Finding", "Details"]
-                )
+                writer = csv.DictWriter(f, fieldnames=["Module", "Severity", "Finding", "Details"])
                 writer.writeheader()
 
         logger.info("csv_export_complete", extra={"path": output_path})
         return os.path.abspath(output_path)
 
-    def export_txt(
-        self, results: Dict[str, Any], summary: Dict[str, Any], filename: str
-    ) -> str:
+    def export_txt(self, results: Dict[str, Any], summary: Dict[str, Any], filename: str) -> str:
         """
         Export results as plain text
 
@@ -168,9 +162,7 @@ class ExportHandler:
                 f.write("No findings.\n\n")
             else:
                 for finding in findings_list:
-                    f.write(
-                        f"[{finding.get('severity', 'INFO')}] {finding.get('module', 'Unknown')}\n"
-                    )
+                    f.write(f"[{finding.get('severity', 'INFO')}] {finding.get('module', 'Unknown')}\n")
                     f.write(f"    Description: {finding.get('description', 'N/A')}\n")
                     if finding.get("evidence"):
                         ev = finding.get("evidence", "")
@@ -180,9 +172,7 @@ class ExportHandler:
                             ev_text = str(ev)
                         f.write(f"    Evidence: {ev_text[:200]}\n")
                     if finding.get("remediation"):
-                        f.write(
-                            f"    Remediation: {finding.get('remediation', '')[:200]}\n"
-                        )
+                        f.write(f"    Remediation: {finding.get('remediation', '')[:200]}\n")
                     f.write("\n")
 
             # Footer

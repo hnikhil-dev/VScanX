@@ -23,4 +23,3 @@ def same_origin(a: str, b: str) -> bool:
     pa = urlparse(a)
     pb = urlparse(b)
     return (pa.scheme, pa.netloc) == (pb.scheme, pb.netloc)
-

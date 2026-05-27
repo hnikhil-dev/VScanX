@@ -50,9 +50,7 @@ def test_auth_bypass_status_transition_logic():
 
 def test_js_secret_extract_and_detect():
     analyzer = JSSecretAnalyzer()
-    js_urls = analyzer._extract_js_urls(
-        "http://example.local", "<script src='/static/app.js'></script>"
-    )
+    js_urls = analyzer._extract_js_urls("http://example.local", "<script src='/static/app.js'></script>")
     assert js_urls == ["http://example.local/static/app.js"]  # nosec: B101
     secrets, endpoints = analyzer._analyze_js_text(
         "http://example.local/static/app.js",

@@ -5,12 +5,15 @@ Analyzes contract bytecode and ABI configurations to detect potential reentrancy
 
 import json
 from typing import Any, Dict
+
 from modules.base_module import BaseModule
+
 
 # Dynamic import helper for Web3 to fail gracefully if package not installed
 def get_web3_client(rpc_url: str):
     try:
         from web3 import Web3
+
         return Web3(Web3.HTTPProvider(rpc_url))
     except ImportError:
         return None
@@ -29,7 +32,7 @@ class ReentrancyAnalyzer(BaseModule):
 
     def run(self, target: str, **kwargs) -> Dict[str, Any]:
         self.clear_results()
-        
+
         rpc_url = kwargs.get("rpc_url") or getattr(self, "rpc_url", None)
         contract_address = kwargs.get("contract") or getattr(self, "contract", None)
         abi_path = kwargs.get("abi") or getattr(self, "abi", None)
@@ -50,7 +53,7 @@ class ReentrancyAnalyzer(BaseModule):
                 details="Python 'web3' package is required for Smart Contract scanning. Run: pip install web3",
                 remediation="Install 'web3>=6.0.0' using python's package manager.",
                 confidence="HIGH",
-                verified=False
+                verified=False,
             )
             return {"module": self.name, "target": target, "findings": self.get_results()}
 
@@ -68,7 +71,7 @@ class ReentrancyAnalyzer(BaseModule):
             )
             return {"module": self.name, "target": target, "findings": self.get_results()}
 
-        if not bytecode or bytecode == b'\x00' or bytecode == b'':
+        if not bytecode or bytecode == b"\x00" or bytecode == b"":
             self.add_result(
                 severity="HIGH",
                 finding="Target is not a Contract Account",
@@ -76,7 +79,7 @@ class ReentrancyAnalyzer(BaseModule):
                 remediation="Ensure the '--contract' argument is pointing to a deployed smart contract, not a personal wallet address.",
                 confidence="HIGH",
                 verified=True,
-                tags=["SC08:2026", "web3"]
+                tags=["SC08:2026", "web3"],
             )
             return {"module": self.name, "target": target, "findings": self.get_results()}
 
@@ -113,7 +116,7 @@ class ReentrancyAnalyzer(BaseModule):
             details = f"Retrieved contract bytecode size: {bytecode_len} bytes. Detected EVM CALL (f1) opcode inside bytecode."
             if vulnerable_candidates:
                 details += f" ABI contains high-risk withdrawal/transfer methods: {', '.join(vulnerable_candidates)}."
-            
+
             self.add_result(
                 severity="HIGH" if vulnerable_candidates else "MEDIUM",
                 finding="Potential Reentrancy Vulnerability Vector Detected",
@@ -122,7 +125,7 @@ class ReentrancyAnalyzer(BaseModule):
                 confidence="MEDIUM",
                 verified=False,
                 tags=["SC08:2026", "reentrancy", "web3"],
-                evidence=f"Bytecode length: {bytecode_len} bytes | Call Opcode: Yes | DelegateCall Opcode: {'Yes' if has_delegatecall else 'No'}"
+                evidence=f"Bytecode length: {bytecode_len} bytes | Call Opcode: Yes | DelegateCall Opcode: {'Yes' if has_delegatecall else 'No'}",
             )
         else:
             self.add_result(
@@ -135,4 +138,5 @@ class ReentrancyAnalyzer(BaseModule):
 
     async def run_async(self, target: str, **kwargs) -> Dict[str, Any]:
         import asyncio
+
         return await asyncio.to_thread(self.run, target, **kwargs)

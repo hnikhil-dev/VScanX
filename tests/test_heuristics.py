@@ -18,33 +18,22 @@ class DummyHandler:
 
 
 def test_sqli_payload_detects_error_pattern():
-    detector = SQLiDetector(
-        handler=DummyHandler(FakeResponse("SQL syntax error near 'test'", 500))
-    )
+    detector = SQLiDetector(handler=DummyHandler(FakeResponse("SQL syntax error near 'test'", 500)))
     params = {"q": "test"}
-    assert (
-        detector._test_payload("http://example.com", params, "q", "payload", 100, 200)
-        is True
-    )
+    assert detector._test_payload("http://example.com", params, "q", "payload", 100, 200) is True
 
 
 def test_sqli_payload_detects_length_anomaly():
     detector = SQLiDetector(handler=DummyHandler(FakeResponse("A" * 150, 200)))
     params = {"q": "test"}
     # baseline length 100, response 150 => 50% diff > 20%
-    assert (
-        detector._test_payload("http://example.com", params, "q", "payload", 100, 200)
-        is True
-    )
+    assert detector._test_payload("http://example.com", params, "q", "payload", 100, 200) is True
 
 
 def test_sqli_payload_detects_status_anomaly():
     detector = SQLiDetector(handler=DummyHandler(FakeResponse("OK", 503)))
     params = {"q": "test"}
-    assert (
-        detector._test_payload("http://example.com", params, "q", "payload", 100, 200)
-        is True
-    )
+    assert detector._test_payload("http://example.com", params, "q", "payload", 100, 200) is True
 
 
 def test_xss_validate_reflection_dangerous_context():

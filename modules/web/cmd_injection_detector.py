@@ -3,8 +3,8 @@ VScanX OS Command Injection Detector
 Tests input parameters for OS Command Injection vulnerabilities.
 """
 
-import time
 import logging
+import time
 from urllib.parse import parse_qs, urlparse
 
 from core.request_handler import RequestHandler
@@ -36,7 +36,7 @@ class CmdInjectionDetector(BaseModule):
             {"pattern": "Windows IP Configuration", "desc": "Windows 'ipconfig' command output"},
             {"pattern": "Ethernet adapter", "desc": "Windows 'ipconfig' command output"},
             {"pattern": "Link encap:Local Loopback", "desc": "Linux 'ifconfig' command output"},
-            {"pattern": "inet addr:", "desc": "Linux/Unix network info output"}
+            {"pattern": "inet addr:", "desc": "Linux/Unix network info output"},
         ]
 
         # Payloads to inject
@@ -60,8 +60,8 @@ class CmdInjectionDetector(BaseModule):
             "; sleep 5",
             "| sleep 5",
             "& sleep 5",
-            "; ping -n 5 127.0.0.1", # Windows ping 5 times
-            "; ping -c 5 127.0.0.1", # Linux ping 5 times
+            "; ping -n 5 127.0.0.1",  # Windows ping 5 times
+            "; ping -c 5 127.0.0.1",  # Linux ping 5 times
         ]
 
     def run(self, target: str, verbose: bool = False, **kwargs):
@@ -76,7 +76,7 @@ class CmdInjectionDetector(BaseModule):
         start_time = time.time()
         baseline = self.handler.get(target)
         baseline_duration = time.time() - start_time
-        
+
         if not baseline:
             return {"module": self.name, "target": target, "findings": []}
 
@@ -96,11 +96,11 @@ class CmdInjectionDetector(BaseModule):
             for payload in self.payloads:
                 test_params = params.copy()
                 test_params[param_name] = payload
-                
+
                 req_start = time.time()
                 resp = self.handler.get(base_url, params=test_params)
                 req_duration = time.time() - req_start
-                
+
                 if not resp:
                     continue
 
@@ -112,7 +112,7 @@ class CmdInjectionDetector(BaseModule):
                         is_vuln = True
                         vuln_desc = f"Response body matched signature for {sig['desc']}"
                         break
-                
+
                 # 2. Time-based checks (if sleep/ping was injected and took > 4 seconds longer than baseline)
                 if not is_vuln and ("sleep" in payload or "ping" in payload):
                     if req_duration - baseline_duration >= 4.0:
@@ -128,10 +128,12 @@ class CmdInjectionDetector(BaseModule):
                         confidence="HIGH",
                         verified=True,
                         parameter=param_name,
-                        evidence=resp.text[:500] if not ("sleep" in payload or "ping" in payload) else f"Response time delay of {req_duration:.2f}s",
-                        tags=["A05:2026", "injection", "rce"]
+                        evidence=resp.text[:500]
+                        if not ("sleep" in payload or "ping" in payload)
+                        else f"Response time delay of {req_duration:.2f}s",
+                        tags=["A05:2026", "injection", "rce"],
                     )
-                    break # stop testing payloads for this parameter once confirmed
+                    break  # stop testing payloads for this parameter once confirmed
 
         if not self.get_results():
             self.add_result(
@@ -147,6 +149,7 @@ class CmdInjectionDetector(BaseModule):
 
     async def run_async_wrapper(self, target: str, **kwargs):
         import asyncio
+
         return await asyncio.to_thread(self.run, target, **kwargs)
 
     def _extract_parameters(self, target: str):

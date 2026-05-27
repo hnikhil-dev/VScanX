@@ -22,4 +22,3 @@ class OOBManager:
         base = self.base_url.rstrip("/")
         safe_tag = "".join(c for c in (tag or "vscanx") if c.isalnum() or c in "-_")[:24]
         return f"{base}/{safe_tag}/{token}"
-

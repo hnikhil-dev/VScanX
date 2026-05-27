@@ -55,9 +55,7 @@ def setup_logging(level: int = logging.INFO) -> None:
     logging.getLogger("requests").setLevel(logging.WARNING)
 
 
-def setup_logging_with_file(
-    level: int = logging.INFO, log_path: Optional[str] = None
-) -> None:
+def setup_logging_with_file(level: int = logging.INFO, log_path: Optional[str] = None) -> None:
     """
     Configure root logger with JSON output to stdout and optional JSONL file sink.
     """
