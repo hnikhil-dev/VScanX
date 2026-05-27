@@ -71,7 +71,35 @@ class CVEChecker(BaseModule):
             )
             self._check_cves(software_versions)
 
-        self.handler.close()
+        return {
+            "module": self.name,
+            "target": target,
+            "software_detected": software_versions,
+            "findings": self.get_results(),
+        }
+
+    async def run_async(
+        self, target: str, verbose: bool = False, **kwargs
+    ) -> Dict[str, Any]:
+        """Async CVE check path."""
+        self.clear_results()
+        self.verbose = verbose
+        if not target.startswith(("http://", "https://")):
+            target = f"http://{target}"
+
+        response = await self.handler.async_get(target)
+        if not response:
+            return {"module": self.name, "target": target, "findings": []}
+
+        software_versions = self._detect_versions(response)
+        if not software_versions:
+            self.add_result(
+                severity="INFO",
+                finding="No detectable software versions",
+                details="Unable to identify server software",
+            )
+        else:
+            self._check_cves(software_versions)
 
         return {
             "module": self.name,

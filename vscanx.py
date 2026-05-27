@@ -6,11 +6,24 @@ Main CLI entry point with Phase 3 enhancements (Authentication + CVE)
 
 import argparse
 import logging
+import os
 import sys
+import warnings
 from datetime import datetime
 
-from core.config import DEFAULT_DELAY, SCAN_PROFILES, VERSION
+# Silence noisy third-party python warnings (e.g. from scapy/cryptography)
+warnings.filterwarnings("ignore")
+
+from core.config import (
+    DEFAULT_DELAY,
+    DEFENSIVE_VARIANTS_DEFAULT_ENABLED,
+    ELITE_AUTOMATION_DEFAULT_ENABLED,
+    SCAN_PROFILES,
+    VERSION,
+)
 from core.logging_config import setup_logging_with_file
+from core.console import print_banner, print_legal_warning, print_summary, DIM, RESET
+from core.cli_reporter import CLIReporter
 from core.orchestrator import Orchestrator
 from reporting.export_formats import ExportHandler
 from reporting.report_generator import ReportGenerator
@@ -25,35 +38,9 @@ def vprint(message: str):
         print(message)
 
 
-def print_banner():
-    """Display ASCII banner"""
-    banner = (
-        "========================================================\n"
-        "VScanX - Ethical Vulnerability Scanner\n"
-        f"Version {VERSION}\n"
-        "Modular Security Testing Framework\n"
-        "========================================================"
-    )
-    print(banner)
-
-
 def show_legal_warning():
     """Display legal warning"""
-    warning = """
-⚠️  LEGAL WARNING ⚠️
-
-This tool is designed for AUTHORIZED security testing only.
-You must have explicit permission to scan any target system.
-Unauthorized scanning may be illegal in your jurisdiction.
-
-By using this tool, you agree to:
-  • Only scan systems you own or have written authorization to test
-  • Comply with all applicable laws and regulations
-  • Accept full responsibility for your actions
-
-The developers assume NO liability for misuse of this tool.
-"""
-    print(warning)
+    print_legal_warning()
 
 
 def list_profiles():
@@ -125,6 +112,43 @@ Examples:
         choices=list(SCAN_PROFILES.keys()),
         help="Use predefined scan profile (quick/normal/full/stealth)",
     )
+    parser.add_argument(
+        "--only",
+        type=str,
+        help="Comma-separated list of modules to run exclusively (e.g. sqli, xss, dir)",
+        default=None,
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume scan state (crawler inventory and artifacts) using --scan-id",
+    )
+    parser.add_argument(
+        "--replay",
+        action="store_true",
+        help="Replay a previous scan from --state-dir using --scan-id (no scanning; reports only).",
+    )
+    parser.add_argument(
+        "--replay-verify",
+        action="store_true",
+        help="Replay verification only for a saved scan (requires --scan-id). Updates verification_state/confidence from reproduction contracts.",
+    )
+    parser.add_argument(
+        "--diff",
+        action="store_true",
+        help="Diff two saved scans (requires --scan-id and --scan-id2). Writes a JSON diff report.",
+    )
+    parser.add_argument(
+        "--scan-id2",
+        type=str,
+        help="Second scan identifier for --diff (compares --scan-id → --scan-id2).",
+    )
+    parser.add_argument(
+        "--state-dir",
+        type=str,
+        default=".vscanx_state",
+        help="Directory for persistent scan state (default: .vscanx_state)",
+    )
 
     parser.add_argument(
         "--list-profiles",
@@ -193,6 +217,37 @@ Examples:
         action="store_true",
         help="Capture redacted request/response metadata for debugging",
     )
+    parser.add_argument(
+        "--strict-events",
+        action="store_true",
+        help="Fail fast on invalid internal event payloads (recommended for CI/dev only).",
+    )
+
+    elite_group = parser.add_argument_group("Elite Automation (Phase 5)")
+    elite_group.add_argument(
+        "--elite",
+        action="store_true",
+        default=ELITE_AUTOMATION_DEFAULT_ENABLED,
+        help="Enable elite automation layer (chaining + PoC + OOB provisioning)",
+    )
+    elite_group.add_argument(
+        "--defensive-variants",
+        action="store_true",
+        default=DEFENSIVE_VARIANTS_DEFAULT_ENABLED,
+        help="Enable defensive URL normalization variant checks (reports inconsistencies only)",
+    )
+    elite_group.add_argument(
+        "--defensive-variants-nonstrict",
+        action="store_true",
+        default=False,
+        help="Use non-strict variant checks (includes large content deltas; higher sensitivity)",
+    )
+    elite_group.add_argument(
+        "--oob-base-url",
+        type=str,
+        default="",
+        help="Base URL for OOB callbacks (optional, e.g. https://<your-listener>)",
+    )
 
     # Misc options
     parser.add_argument("--version", action="version", version=f"VScanX {VERSION}")
@@ -259,10 +314,179 @@ def main():
         list_profiles()
         return
 
-    # Validate required arguments
+    # Diff mode: compare two saved scans and write diff JSON (no scanning).
+    if args.diff:
+        if not args.scan_id or not args.scan_id2:
+            log.error("--diff requires --scan-id and --scan-id2")
+            return
+        from core.state.store import ScanStateStore
+        from core.state.diff import diff_scan_results
+
+        store = ScanStateStore(root_dir=str(args.state_dir))
+        a = store.load(str(args.scan_id), "results")
+        b = store.load(str(args.scan_id2), "results")
+        if not a:
+            log.error("No saved scan results found for scan_id=%s", args.scan_id)
+            return
+        if not b:
+            log.error("No saved scan results found for scan_id=%s", args.scan_id2)
+            return
+
+        out = diff_scan_results(a, b)
+        outname = args.output or f"diff_{args.scan_id}_to_{args.scan_id2}"
+        os.makedirs("reports", exist_ok=True)
+        outpath = os.path.abspath(os.path.join("reports", f"{outname}.diff.json"))
+        with open(outpath, "w", encoding="utf-8") as f:
+            import json
+
+            json.dump(out, f, indent=2, ensure_ascii=False)
+
+        c = out.get("counts", {})
+        log.info(
+            "Diff complete: new=%s resolved=%s changed=%s unchanged=%s",
+            c.get("new"),
+            c.get("resolved"),
+            c.get("changed"),
+            c.get("unchanged"),
+        )
+        print(f"[+] Diff report written: {outpath}")
+        return
+
+    # Replay mode: load prior scan and regenerate reports without scanning.
+    if args.replay:
+        if not args.scan_id:
+            log.error("--replay requires --scan-id")
+            return
+        from core.state.store import ScanStateStore
+
+        store = ScanStateStore(root_dir=str(args.state_dir))
+        loaded = store.load(str(args.scan_id), "results")
+        if not loaded:
+            log.error("No saved scan results found for scan_id=%s", args.scan_id)
+            return
+        # Minimal summary for reporting if absent.
+        summary = {
+            "target": loaded.get("target", "N/A"),
+            "scan_type": str(loaded.get("scan_type", "mixed")).upper(),
+            "start_time": loaded.get("start_time", ""),
+            "duration": loaded.get("duration", 0),
+            "total_findings": len(loaded.get("findings", []) or []),
+            "by_severity": {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0},
+        }
+        for f in loaded.get("findings", []) or []:
+            sev = str(f.get("severity", "INFO")).upper()
+            if sev in summary["by_severity"]:
+                summary["by_severity"][sev] += 1
+
+        # Write reports using existing exporters
+        outname = args.output or f"replay_{args.scan_id}"
+        gen = ReportGenerator(output_dir="reports")
+        exporter = ExportHandler()
+
+        export_formats = (
+            [fmt.strip().lower() for fmt in args.format.split(",")]
+            if args.format
+            else ["html"]
+        )
+        export_formats = [fmt for fmt in export_formats if fmt]
+
+        if args.no_report:
+            log.info("Replay loaded successfully (no-report requested)")
+            return
+
+        base = outname
+        if "html" in export_formats:
+            gen.generate_html_report(loaded, summary, base)
+        if "json" in export_formats:
+            exporter.export_json(loaded, base)
+        if "csv" in export_formats:
+            exporter.export_csv(loaded, base)
+        if "txt" in export_formats:
+            exporter.export_txt(loaded, summary, base)
+        log.info("Replay report generation complete")
+        return
+
+    # Replay-verify mode: rerun verification only from reproduction contracts.
+    if args.replay_verify:
+        if not args.scan_id:
+            log.error("--replay-verify requires --scan-id")
+            return
+        from core.state.store import ScanStateStore
+        from core.state.reverify import reverify_results
+        from core.request_handler import RequestHandler
+
+        store = ScanStateStore(root_dir=str(args.state_dir))
+        loaded = store.load(str(args.scan_id), "results")
+        if not loaded:
+            log.error("No saved scan results found for scan_id=%s", args.scan_id)
+            return
+
+        # Optional auth context for verification-only replay (tokens/session supported).
+        handler = None
+        if any([args.login_url, args.bearer_token, args.api_key, args.session_file]):
+            handler = RequestHandler(
+                delay=args.delay if args.delay else DEFAULT_DELAY,
+                debug_capture=args.debug_capture,
+            )
+            if args.session_file:
+                if not handler.load_session(args.session_file):
+                    log.error("Failed to load session")
+                    return
+            elif args.bearer_token:
+                handler.set_bearer_token(args.bearer_token)
+            elif args.api_key:
+                handler.set_api_key(args.api_key, args.api_key_header)
+        else:
+            handler = RequestHandler(delay=args.delay if args.delay else DEFAULT_DELAY)
+
+        updated, st = reverify_results(loaded, handler)
+        # Persist as a separate key to keep the original scan intact
+        store.save(str(args.scan_id), "results_reverify", updated)
+
+        outname = args.output or f"reverify_{args.scan_id}"
+        # Minimal summary for reporting
+        summary = {
+            "target": updated.get("target", "N/A"),
+            "scan_type": str(updated.get("scan_type", "mixed")).upper(),
+            "start_time": updated.get("start_time", ""),
+            "duration": updated.get("duration", 0),
+            "total_findings": len(updated.get("findings", []) or []),
+            "by_severity": {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0},
+        }
+        for f in updated.get("findings", []) or []:
+            sev = str(f.get("severity", "INFO")).upper()
+            if sev in summary["by_severity"]:
+                summary["by_severity"][sev] += 1
+
+        if args.no_report:
+            log.info("Replay-verify complete: %s", st)
+            return
+
+        gen = ReportGenerator(output_dir="reports")
+        exporter = ExportHandler()
+        export_formats = (
+            [fmt.strip().lower() for fmt in args.format.split(",")]
+            if args.format
+            else ["html"]
+        )
+        export_formats = [fmt for fmt in export_formats if fmt]
+
+        if "html" in export_formats:
+            gen.generate_html_report(updated, summary, outname)
+        if "json" in export_formats:
+            exporter.export_json(updated, outname)
+        if "csv" in export_formats:
+            exporter.export_csv(updated, outname)
+        if "txt" in export_formats:
+            exporter.export_txt(updated, summary, outname)
+
+        log.info("Replay-verify report generation complete: %s", st)
+        return
+
+    # Validate required arguments for live scans
     if not args.target:
         parser.print_help()
-        log.error("Target (-t/--target) is required")
+        log.error("Target (-t/--target) is required (or use --replay)")
         return
 
     # Set verbosity
@@ -372,6 +596,36 @@ def main():
             log.error("Invalid port range: %s", args.ports)
             return
 
+    # Apply --only module filter
+    if args.only:
+        only_modules = [m.strip().lower() for m in args.only.split(",")]
+        # Disable all checks
+        for key in ["check_directories", "check_headers", "check_cve", 
+                    "check_rate_limit", "check_tech_fingerprint", "check_idor",
+                    "check_auth_bypass", "check_hpp", "check_js_secrets",
+                    "check_subdomain_recon", "check_open_redirect", "check_xss", "check_sqli"]:
+            profile_config[key] = False
+        
+        # Turn off selective scanning so it doesn't arbitrarily skip explicitly requested modules
+        profile_config["selective_scanning"] = False
+        
+        # Enable specified ones
+        module_map = {
+            "dir": "check_directories", "dir_enum": "check_directories",
+            "headers": "check_headers", "cve": "check_cve",
+            "rate_limit": "check_rate_limit", "tech": "check_tech_fingerprint",
+            "idor": "check_idor", "auth": "check_auth_bypass", "hpp": "check_hpp",
+            "secrets": "check_js_secrets", "subdomain": "check_subdomain_recon",
+            "redirect": "check_open_redirect", "sqli": "check_sqli", "xss": "check_xss",
+            "sql": "check_sqli", "sqlinjection": "check_sqli"
+        }
+        for mod in only_modules:
+            if mod in module_map:
+                profile_config[module_map[mod]] = True
+                log.info("Enabled module exclusively: %s", module_map[mod])
+            else:
+                log.warning("Unknown module in --only: %s", mod)
+
     # Set export formats (support comma-separated with spaces)
     export_formats = (
         [fmt.strip().lower() for fmt in args.format.split(",")]
@@ -402,7 +656,36 @@ def main():
         scan_id=args.scan_id,
         parallel_modules=args.parallel_modules,
         debug_capture=args.debug_capture,
+        elite_automation=bool(args.elite),
+        oob_base_url=str(args.oob_base_url or ""),
+        defensive_variants=bool(args.defensive_variants),
+        defensive_variants_strict=not bool(args.defensive_variants_nonstrict),
+        state_dir=str(args.state_dir),
+        resume=bool(args.resume),
+        strict_events=bool(
+            args.strict_events
+            or os.environ.get("VSCANX_STRICT_EVENTS", "").strip().lower() in ["1", "true", "yes", "y"]
+        ),
     )
+
+    # Initialize CLI reporter to catch and style output events
+    reporter = CLIReporter(orchestrator.event_bus)
+
+    # Trigger scan.started event
+    try:
+        orchestrator.event_bus.publish(
+            "scan.started",
+            {
+                "target": args.target,
+                "scan_type": args.scan_type,
+                "threads": args.threads if args.threads else profile_config.get("max_threads", 10),
+                "delay": args.delay if args.delay else profile_config.get("delay", 1.0),
+                "profile_name": args.profile,
+                "profile_desc": profile_config.get("description"),
+            }
+        )
+    except Exception:
+        pass
 
     # Execute scan
     results = orchestrator.execute_scan(
@@ -432,24 +715,9 @@ def main():
     )
     summary["duration"] = summary.get("duration", results.get("duration", 0))
 
-    # Display summary
-    print("\n" + "=" * 60)
-    print("SCAN SUMMARY")
-    print("=" * 60)
-    print(f"Total Findings: {summary['total_findings']}")
-    print(f"  CRITICAL: {summary['by_severity']['CRITICAL']}")
-    print(f"  HIGH:     {summary['by_severity']['HIGH']}")
-    print(f"  MEDIUM:   {summary['by_severity']['MEDIUM']}")
-    print(f"  LOW:      {summary['by_severity']['LOW']}")
-    print(f"  INFO:     {summary['by_severity']['INFO']}")
-    if summary.get("authenticated"):
-        print("  Authentication: ENABLED")
-    print("=" * 60 + "\n")
-
     # Skip report generation if requested
     if args.no_report:
-        print("[*] Skipping report generation (--no-report flag set)")
-        print("\n[+] Scan completed successfully!")
+        print_summary(summary, [])
         return
 
     # Generate reports
@@ -472,10 +740,11 @@ def main():
         else f"vscanx_{safe_host}_{args.scan_type}_{timestamp}"
     )
 
-    print(f"[*] Generating reports with base name: {base_filename}")
+    print(f"\n{DIM}[*] Generating reports with base name: {base_filename}{RESET}")
 
     generator = ReportGenerator()
     exporter = ExportHandler()
+    generated_reports = []
 
     # Single pass over requested formats, ensure each runs exactly once
     for fmt in dict.fromkeys(export_formats):  # preserve order, unique
@@ -485,22 +754,22 @@ def main():
                 html_path = generator.generate_html_report(
                     results, summary, base_filename
                 )
-                print(f"[+] HTML report: {html_path}")
+                generated_reports.append(html_path)
             elif fmt == "pdf":
                 pdf_path = generator.generate_pdf_report(
                     results, summary, base_filename
                 )
                 if pdf_path:
-                    print(f"[+] PDF report: {pdf_path}")
+                    generated_reports.append(pdf_path)
             elif fmt == "json":
                 json_path = exporter.export_json(results, base_filename)
-                print(f"[+] JSON report: {json_path}")
+                generated_reports.append(json_path)
             elif fmt == "csv":
                 csv_path = exporter.export_csv(results, base_filename)
-                print(f"[+] CSV report: {csv_path}")
+                generated_reports.append(csv_path)
             elif fmt == "txt":
                 txt_path = exporter.export_txt(results, summary, base_filename)
-                print(f"[+] TXT report: {txt_path}")
+                generated_reports.append(txt_path)
             else:
                 print(f"[!] Unknown format: {fmt}")
         except Exception as e:
@@ -524,8 +793,14 @@ def main():
     except Exception as e:
         log.error("Failed to write metrics artifact: %s", e)
 
-    print("\n[+] Scan completed successfully!")
+    # Display beautifully styled summary and report list
+    print_summary(summary, generated_reports)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        from core.console import RED, BOLD, RESET
+        print(f"\n{RED}{BOLD}[!] Scan aborted by user (Ctrl+C). Exiting...{RESET}\n")
+        sys.exit(130)

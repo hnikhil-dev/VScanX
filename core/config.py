@@ -10,6 +10,8 @@ VERSION = "2.1.0"
 DEFAULT_DELAY = 1.0  # seconds between requests
 MAX_RETRIES = 3
 TIMEOUT = 10  # seconds
+RATE_LIMIT_BURST_REQUESTS = 12
+RATE_LIMIT_WINDOW_SECONDS = 4
 
 # Network Scanning
 DEFAULT_PORT_RANGE = (1, 1024)  # Common ports only
@@ -34,6 +36,56 @@ SQLI_PAYLOADS = [
     "' UNION SELECT NULL--",
     "1' AND '1'='1",
 ]
+
+AUTH_BYPASS_HEADERS = [
+    {"X-Forwarded-For": "127.0.0.1"},
+    {"X-Original-URL": "/admin"},
+    {"X-Rewrite-URL": "/admin"},
+]
+
+HPP_PAYLOAD_SUFFIXES = ["safe", "admin", "1", "true"]
+
+SUBDOMAIN_WORDLIST = [
+    "www",
+    "api",
+    "dev",
+    "staging",
+    "test",
+    "admin",
+    "portal",
+    "beta",
+    "cdn",
+    "assets",
+    "mail",
+]
+
+JS_SECRET_PATTERNS = {
+    "aws_access_key": r"AKIA[0-9A-Z]{16}",
+    "github_token": r"ghp_[A-Za-z0-9]{36}",
+    "slack_token": r"xox[baprs]-[A-Za-z0-9-]{10,}",
+    "private_key_block": r"-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----",
+    "generic_api_key": r"(?i)(api[_-]?key|token|secret)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}['\"]",
+}
+
+OPEN_REDIRECT_PARAM_NAMES = [
+    "next",
+    "url",
+    "redirect",
+    "redirect_uri",
+    "return",
+    "returnTo",
+    "continue",
+    "dest",
+    "destination",
+    "callback",
+]
+
+DIR_ENUM_DEFAULT_EXTENSIONS = ["", ".php", ".asp", ".aspx", ".jsp", ".json", ".bak", ".zip"]
+DIR_ENUM_MAX_RECURSION_DEPTH = 2
+
+# Phase 5 (Elite Automation)
+ELITE_AUTOMATION_DEFAULT_ENABLED = False
+DEFENSIVE_VARIANTS_DEFAULT_ENABLED = False
 
 # Directory Enumeration
 COMMON_DIRECTORIES = [
@@ -275,6 +327,20 @@ SCAN_PROFILES = {
         "sqli_payloads": 2,
         "check_directories": False,
         "check_headers": True,
+        "check_rate_limit": True,
+        "check_tech_fingerprint": True,
+        "check_idor": True,
+        "check_auth_bypass": True,
+        "check_hpp": True,
+        "check_js_secrets": True,
+        "check_subdomain_recon": True,
+        "check_open_redirect": True,
+        "dir_enum_recursive": False,
+        "crawl_enabled": True,
+        "crawl_max_urls": 40,
+        "crawl_max_depth": 2,
+        "request_quota": 600,
+        "selective_scanning": True,
         "delay": 0.5,
     },
     "normal": {
@@ -285,6 +351,20 @@ SCAN_PROFILES = {
         "sqli_payloads": 3,
         "check_directories": True,
         "check_headers": True,
+        "check_rate_limit": True,
+        "check_tech_fingerprint": True,
+        "check_idor": True,
+        "check_auth_bypass": True,
+        "check_hpp": True,
+        "check_js_secrets": True,
+        "check_subdomain_recon": True,
+        "check_open_redirect": True,
+        "dir_enum_recursive": True,
+        "crawl_enabled": True,
+        "crawl_max_urls": 80,
+        "crawl_max_depth": 3,
+        "request_quota": 2000,
+        "selective_scanning": True,
         "delay": 1.0,
     },
     "full": {
@@ -295,6 +375,20 @@ SCAN_PROFILES = {
         "sqli_payloads": 6,
         "check_directories": True,
         "check_headers": True,
+        "check_rate_limit": True,
+        "check_tech_fingerprint": True,
+        "check_idor": True,
+        "check_auth_bypass": True,
+        "check_hpp": True,
+        "check_js_secrets": True,
+        "check_subdomain_recon": True,
+        "check_open_redirect": True,
+        "dir_enum_recursive": True,
+        "crawl_enabled": True,
+        "crawl_max_urls": 150,
+        "crawl_max_depth": 3,
+        "request_quota": 5000,
+        "selective_scanning": True,
         "delay": 1.5,
     },
     "stealth": {
@@ -305,9 +399,45 @@ SCAN_PROFILES = {
         "sqli_payloads": 2,
         "check_directories": False,
         "check_headers": True,
+        "check_rate_limit": False,
+        "check_tech_fingerprint": True,
+        "check_idor": False,
+        "check_auth_bypass": True,
+        "check_hpp": False,
+        "check_js_secrets": True,
+        "check_subdomain_recon": True,
+        "check_open_redirect": True,
+        "dir_enum_recursive": False,
+        "crawl_enabled": True,
+        "crawl_max_urls": 30,
+        "crawl_max_depth": 2,
+        "request_quota": 450,
+        "selective_scanning": True,
         "delay": 3.0,
     },
 }
 
 # Output Formats
 EXPORT_FORMATS = ["html", "json", "csv", "txt"]
+
+TECH_FINGERPRINT_PATTERNS = {
+    "servers": {
+        "nginx": r"nginx",
+        "apache": r"apache",
+        "iis": r"microsoft-iis",
+        "caddy": r"caddy",
+    },
+    "frameworks": {
+        "django": r"django",
+        "flask": r"flask|werkzeug",
+        "laravel": r"laravel",
+        "express": r"express",
+        "rails": r"rails|passenger",
+        "nextjs": r"next\.js|x-nextjs",
+    },
+    "cms": {
+        "wordpress": r"wp-content|wordpress",
+        "drupal": r"drupal",
+        "joomla": r"joomla",
+    },
+}

@@ -1,4 +1,5 @@
 requests==2.31.0
+httpx==0.27.2
 scapy==2.5.0
 jinja2==3.1.2
 jsonschema==4.19.0

@@ -9,7 +9,7 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict, List
 
 from reporting.export_validator import sanitize_for_export, validate_before_export
 
@@ -276,15 +276,17 @@ class ReportGenerator:
     def _build_html(self, results: Dict, summary: Dict) -> str:
         """Build HTML content with remediation notes"""
 
-        findings_html = ""
-        for finding in results.get("findings", []):
-            severity_color = {
+        def _severity_color(sev: str) -> str:
+            return {
                 "CRITICAL": "#C01530",
                 "HIGH": "#E67E22",
                 "MEDIUM": "#F39C12",
                 "LOW": "#3498DB",
                 "INFO": "#95A5A6",
-            }.get(finding.get("severity"), "#7F8C8D")
+            }.get((sev or "").upper(), "#7F8C8D")
+
+        def _render_finding_card(finding: Dict[str, Any]) -> str:
+            severity_color = _severity_color(finding.get("severity"))
 
             # Build remediation section if present
             remediation_html = ""
@@ -298,14 +300,26 @@ class ReportGenerator:
                 )
 
             # Prefer explicit details key, fall back to description or evidence so fields are never left blank
+            verification = finding.get("verification") if isinstance(finding.get("verification"), dict) else {}
+            verification_notes = ""
+            try:
+                verification_notes = str(verification.get("notes", "") or "")
+            except Exception:
+                verification_notes = ""
+
             details_text = (
                 finding.get("details")
+                or verification_notes
                 or finding.get("description")
                 or finding.get("evidence")
                 or "N/A"
             )
             parameter_text = finding.get("parameter", "")
-            evidence_text = finding.get("evidence", "")
+            evidence_obj = finding.get("evidence", "")
+            if isinstance(evidence_obj, dict):
+                evidence_text = evidence_obj.get("summary", "") or str(evidence_obj)
+            else:
+                evidence_text = evidence_obj
 
             module_html = f'<h4 style="margin-top: 0; color: {severity_color};">{finding.get("module", "N/A")}</h4>'
             severity_html = (
@@ -322,22 +336,160 @@ class ReportGenerator:
             )
             evidence_val = html.escape(str(evidence_text)[:300])
             evidence_html = f'<p class="finding-details"><strong>Evidence:</strong> <code>{evidence_val}</code></p>'
+            confidence_html = ""
+            if finding.get("confidence"):
+                conf_val = html.escape(str(finding.get("confidence")))
+                confidence_html = (
+                    f'<p class="finding-details"><strong>Confidence:</strong> '
+                    f"{conf_val}</p>"
+                )
+            verified_html = ""
+            verified_val = finding.get("verified", None)
+            if verified_val is not None:
+                verified_html = (
+                    '<p class="finding-details"><strong>Verified:</strong> '
+                    f"{'Yes' if verified_val else 'No'}</p>"
+                )
 
-            findings_html += (
+            return (
                 '<div style="border-left: 4px solid '
                 f'{severity_color}; padding: 15px; margin-bottom: 15px; background: #F8F9FA;>'
                 + module_html
                 + severity_html
                 + description_html
                 + details_html
+                + confidence_html
+                + verified_html
                 + parameter_html
                 + evidence_html
                 + remediation_html
                 + '</div>'
             )
 
+        all_findings: List[Dict[str, Any]] = list(results.get("findings", []))
+        # Group by endpoint so testers can triage by affected URL first.
+        default_endpoint = summary.get("target", "N/A")
+        grouped: Dict[str, List[Dict[str, Any]]] = {}
+        for f in all_findings:
+            ep = f.get("endpoint") or default_endpoint or "N/A"
+            grouped.setdefault(str(ep), []).append(f)
+
+        severity_rank = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+
+        def _group_sort_key(item: Any) -> Any:
+            ep, fs = item
+            if not fs:
+                return (999, ep)
+            # Sort groups by their highest severity rank first.
+            best = min(severity_rank.get((x.get("severity") or "").upper(), 999) for x in fs)
+            return (best, len(fs), ep)
+
+        findings_html = ""
+        for endpoint, endpoint_findings in sorted(grouped.items(), key=_group_sort_key):
+            # Compute per-endpoint severity counts for a quick visual.
+            by_sev_local = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
+            for f in endpoint_findings:
+                sev = (f.get("severity") or "INFO").upper()
+                if sev in by_sev_local:
+                    by_sev_local[sev] += 1
+            top_color = _severity_color(endpoint_findings[0].get("severity"))
+            endpoint_header = html.escape(str(endpoint))
+            endpoint_summary = (
+                f"Critical {by_sev_local['CRITICAL']}, High {by_sev_local['HIGH']}, "
+                f"Medium {by_sev_local['MEDIUM']}, Low {by_sev_local['LOW']}, "
+                f"Info {by_sev_local['INFO']}"
+            )
+            group_body = "".join(_render_finding_card(f) for f in endpoint_findings)
+            findings_html += (
+                '<details style="margin-bottom: 18px;">'
+                f'<summary style="cursor:pointer; font-weight: 700; color: {top_color};">'
+                f"{endpoint_header}</summary>"
+                f'<div style="padding-left: 14px; margin-top: 10px;">'
+                f'<p style="margin: 0 0 10px 0; opacity: 0.85;">{html.escape(endpoint_summary)}</p>'
+                + group_body
+                + '</div></details>'
+            )
+
+        # Finding timeline: sorted by timestamp (desc) for triage flow.
+        def _fmt_ts(ts: str) -> str:
+            try:
+                # Keep stable formatting even with timezone offsets.
+                if not ts:
+                    return "unknown"
+                return str(ts)[:19].replace("T", " ")
+            except Exception:
+                return "unknown"
+
+        timeline_html = ""
+        try:
+            sorted_findings = sorted(
+                all_findings,
+                key=lambda f: str(f.get("timestamp") or ""),
+                reverse=True,
+            )
+            for f in sorted_findings[:50]:
+                sev = (f.get("severity") or "INFO").upper()
+                timeline_html += (
+                    '<div class="timeline-item">'
+                    f'<span class="timeline-ts">{html.escape(_fmt_ts(f.get("timestamp","")))}</span>'
+                    f'<span class="timeline-sev" style="color: {_severity_color(sev)};">{sev}</span>'
+                    f'<span class="timeline-mod">{html.escape(str(f.get("module","N/A")))}</span>'
+                    f'<span class="timeline-desc">{html.escape(str(f.get("description",""))[:90])}</span>'
+                    '</div>'
+                )
+        except Exception:
+            timeline_html = ""
+
         by_sev = summary.get("by_severity", {})
         target_html = html.escape(str(summary.get("target", "N/A")))
+        modules_html = ""
+        recon_html = ""
+        elite_html = ""
+        for module in results.get("modules", []):
+            module_name = html.escape(str(module.get("module", "Unknown module")))
+            finding_count = len(module.get("findings", []))
+            duration = module.get("duration")
+            duration_text = (
+                f"{float(duration):.2f}s"
+                if isinstance(duration, (int, float))
+                else "n/a"
+            )
+            artifact_text = ""
+            artifacts = module.get("artifacts", {})
+            if isinstance(artifacts, dict) and artifacts:
+                preview = ", ".join(
+                    [f"{k}={v}" for k, v in artifacts.items() if not isinstance(v, list)]
+                )
+                artifact_text = f"<p><strong>Artifacts:</strong> {html.escape(preview[:120])}</p>"
+            modules_html += (
+                '<div class="module-card">'
+                f"<h4>{module_name}</h4>"
+                f"<p><strong>Findings:</strong> {finding_count}</p>"
+                f"<p><strong>Duration:</strong> {duration_text}</p>"
+                f"{artifact_text}"
+                "</div>"
+            )
+            if module_name in ["JS Secret Analyzer", "Subdomain Recon Suite"]:
+                recon_html += (
+                    '<div class="module-card">'
+                    f"<h4>{module_name}</h4>"
+                    f"<p><strong>Findings:</strong> {finding_count}</p>"
+                    f"<p><strong>Details:</strong> {html.escape(str(artifacts)[:260])}</p>"
+                    "</div>"
+                )
+            if module_name in [
+                "Vulnerability Chaining Engine",
+                "PoC Generator",
+                "OOB Hooks",
+                "Defensive Variant Generator",
+            ]:
+                elite_html += (
+                    '<div class="module-card">'
+                    f"<h4>{module_name}</h4>"
+                    f"<p><strong>Findings:</strong> {finding_count}</p>"
+                    f"<p><strong>Details:</strong> {html.escape(str(artifacts)[:260])}</p>"
+                    "</div>"
+                )
 
         html_template = f"""
         <!DOCTYPE html>
@@ -389,6 +541,60 @@ class ReportGenerator:
                     gap: 10px;
                     margin-top: 15px;
                     flex-wrap: wrap;
+                }}
+                .module-grid {{
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                    gap: 12px;
+                    margin-top: 12px;
+                }}
+                .module-card {{
+                    background: #F8F9FA;
+                    border: 1px solid #E4E8EA;
+                    border-radius: 8px;
+                    padding: 12px;
+                }}
+                .module-card h4 {{
+                    color: #1F2121;
+                    margin-bottom: 8px;
+                    font-size: 1em;
+                }}
+                .module-card p {{
+                    font-size: 0.92em;
+                    color: #4B5761;
+                    margin: 2px 0;
+                }}
+                .timeline-item {{
+                    display: grid;
+                    grid-template-columns: 160px 90px 160px 1fr;
+                    gap: 10px;
+                    align-items: center;
+                    background: #F8F9FA;
+                    border: 1px solid #E4E8EA;
+                    border-radius: 8px;
+                    padding: 10px 12px;
+                    margin-bottom: 10px;
+                }}
+                .timeline-ts {{
+                    font-family: 'Monaco', 'Courier New', monospace;
+                    font-size: 0.85em;
+                    color: #4B5761;
+                }}
+                .timeline-sev {{
+                    font-weight: bold;
+                    font-size: 0.9em;
+                }}
+                .timeline-mod {{
+                    color: #1F2121;
+                    font-weight: 600;
+                    font-size: 0.9em;
+                }}
+                .timeline-desc {{
+                    color: #4B5761;
+                    font-size: 0.92em;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
                 }}
                 .severity-badge {{
                     padding: 8px 12px;
@@ -487,7 +693,23 @@ class ReportGenerator:
                     </div>
                 </section>
 
-                <h2>Detailed Findings & Remediation</h2>
+                <h2>Module Execution</h2>
+                <div class="module-grid">
+                    {modules_html if modules_html else '<p style="color: #7F8C8D;">No module execution metadata</p>'}
+                </div>
+                <h2>Recon & Data Mining</h2>
+                <div class="module-grid">
+                    {recon_html if recon_html else '<p style="color: #7F8C8D;">No recon artifacts captured</p>'}
+                </div>
+                <h2>Elite Automation</h2>
+                <div class="module-grid">
+                    {elite_html if elite_html else '<p style="color: #7F8C8D;">Elite automation not enabled</p>'}
+                </div>
+
+                <h2>Finding Timeline</h2>
+                {timeline_html if timeline_html else '<p style="color: #7F8C8D;">No timeline available</p>'}
+
+                <h2>Endpoint Grouping</h2>
                 {findings_html if findings_html else '<p style="color: #7F8C8D;">No vulnerabilities found</p>'}
 
                 <footer>

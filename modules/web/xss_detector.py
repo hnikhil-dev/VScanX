@@ -75,8 +75,52 @@ class XSSDetector(BaseModule):
             logger.info("xss_params_found", extra={"count": len(params)})
             self._test_parameters(target, params)
 
-        self.handler.close()
+        return {"module": self.name, "target": target, "findings": self.get_results()}
 
+    async def run_async(
+        self, target: str, verbose: bool = False, **kwargs
+    ) -> Dict[str, Any]:
+        """Async execution path for high-concurrency orchestration."""
+        import asyncio
+
+        logger = logging.getLogger("vscanx.module.xss_detector")
+        self.clear_results()
+        self.verbose = verbose
+        logger.info("xss_start", extra={"target": target})
+
+        response = await self.handler.async_get(target)
+        if not response:
+            logger.error("xss_fetch_failed", extra={"target": target})
+            return {"module": self.name, "target": target, "findings": []}
+
+        params = self._extract_parameters(target)
+        if not params:
+            self.add_result(
+                severity="INFO",
+                finding="No testable parameters found",
+                details="URL contains no query parameters",
+            )
+            return {"module": self.name, "target": target, "findings": self.get_results()}
+
+        parsed = urlparse(target)
+        base_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        for param_name, _original in params.items():
+            for payload in self.payloads:
+                test_params = params.copy()
+                test_params[param_name] = payload
+                test_response = await self.handler.async_get(base_url, params=test_params)
+                if (
+                    test_response
+                    and payload in test_response.text
+                    and self._validate_reflection(test_response.text, payload)
+                ):
+                    self.add_result(
+                        severity="HIGH",
+                        finding=f"Reflected XSS in parameter '{param_name}'",
+                        details=f"Payload reflected: {payload}",
+                    )
+                    break
+                await asyncio.sleep(0)
         return {"module": self.name, "target": target, "findings": self.get_results()}
 
     def _extract_parameters(self, url: str) -> Dict[str, str]:

@@ -1,6 +1,7 @@
-import requests
 import os
 import sys
+
+import requests
 
 # Read token from environment for safety. Provide via GITHUB_TOKEN env var when running.
 TOKEN = os.environ.get("GITHUB_TOKEN")
@@ -40,7 +41,15 @@ if r.status_code == 201:
 elif r.status_code == 422:
     # Possibly already exists; find it
     print('PR may already exist, searching for open PR...')
-    r2 = requests.get(f"{BASE}/repos/{OWNER}/{REPO}/pulls", headers=headers, params={"head": f"{OWNER}:ci/bandit-triage", "state": "open"})
+    params = {
+        "head": f"{OWNER}:ci/bandit-triage",
+        "state": "open",
+    }
+    r2 = requests.get(
+        f"{BASE}/repos/{OWNER}/{REPO}/pulls",
+        headers=headers,
+        params=params,
+    )
     if r2.ok and r2.json():
         pr = r2.json()[0]
         print('Found existing PR:', pr.get('html_url'))

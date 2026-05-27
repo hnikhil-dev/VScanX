@@ -82,12 +82,17 @@ class ExportHandler:
         # Flatten findings from central findings list
         findings = []
         for finding in sanitized_results.get("findings", []):
+            evidence_val = finding.get("evidence", "")
+            if isinstance(evidence_val, dict):
+                evidence_text = str(evidence_val.get("summary", "")) or str(evidence_val)
+            else:
+                evidence_text = str(evidence_val)
             findings.append(
                 {
                     "Module": finding.get("module", "Unknown"),
                     "Severity": finding.get("severity", "INFO"),
                     "Finding": finding.get("description", ""),
-                    "Details": finding.get("evidence", "")[:500],  # Limit length
+                    "Details": evidence_text[:500],  # Limit length
                 }
             )
 
@@ -168,7 +173,12 @@ class ExportHandler:
                     )
                     f.write(f"    Description: {finding.get('description', 'N/A')}\n")
                     if finding.get("evidence"):
-                        f.write(f"    Evidence: {finding.get('evidence', '')[:200]}\n")
+                        ev = finding.get("evidence", "")
+                        if isinstance(ev, dict):
+                            ev_text = str(ev.get("summary", "")) or str(ev)
+                        else:
+                            ev_text = str(ev)
+                        f.write(f"    Evidence: {ev_text[:200]}\n")
                     if finding.get("remediation"):
                         f.write(
                             f"    Remediation: {finding.get('remediation', '')[:200]}\n"

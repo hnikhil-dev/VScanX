@@ -112,9 +112,65 @@ class SQLiDetector(BaseModule):
             logger.info("sqli_params_found", extra={"count": len(params)})
             self._test_parameters(target, params, baseline_length, baseline_status)
 
-        self.handler.close()
-
         return {"module": self.name, "target": target, "findings": self.get_results()}
+
+    async def run_async(
+        self, target: str, verbose: bool = False, **kwargs
+    ) -> Dict[str, Any]:
+        """Async SQLi detector path for orchestrator concurrency."""
+        self.clear_results()
+        self.verbose = verbose
+        response = await self.handler.async_get(target)
+        if not response:
+            return {"module": self.name, "target": target, "findings": []}
+
+        baseline_length = len(response.text)
+        baseline_status = response.status_code
+        params = self._extract_parameters(target)
+        if not params:
+            self.add_result(
+                severity="INFO",
+                finding="No testable parameters found",
+                details="URL contains no query parameters",
+            )
+            return {"module": self.name, "target": target, "findings": self.get_results()}
+
+        parsed = urlparse(target)
+        base_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        for param_name, _original_value in params.items():
+            for payload in self.payloads:
+                test_params = params.copy()
+                test_params[param_name] = payload
+                test_response = await self.handler.async_get(base_url, params=test_params)
+                if not test_response:
+                    continue
+                if self._is_sqli_anomaly(
+                    test_response, baseline_length=baseline_length, baseline_status=baseline_status
+                ):
+                    self.add_result(
+                        severity="HIGH",
+                        finding=f"SQL Injection in parameter '{param_name}'",
+                        details=f"Payload triggered anomaly: {payload}",
+                        remediation="Implement prepared statements or parameterized queries",
+                    )
+                    break
+        return {"module": self.name, "target": target, "findings": self.get_results()}
+
+    def _is_sqli_anomaly(
+        self, response, baseline_length: int, baseline_status: int
+    ) -> bool:
+        import re
+
+        response_lower = response.text.lower()
+        for pattern in self.error_patterns:
+            if re.search(pattern, response_lower, re.IGNORECASE):
+                return True
+        length_diff = abs(len(response.text) - baseline_length)
+        if length_diff > baseline_length * 0.2:
+            return True
+        if response.status_code != baseline_status and response.status_code >= 500:
+            return True
+        return False
 
     def _extract_parameters(self, url: str) -> Dict[str, str]:
         """

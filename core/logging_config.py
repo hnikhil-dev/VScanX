@@ -42,6 +42,8 @@ def setup_logging(level: int = logging.INFO) -> None:
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
+    # Silence standard output JSON logs entirely (only allow critical errors to surface)
+    handler.setLevel(logging.CRITICAL)
 
     root = logging.getLogger()
     root.setLevel(level)
@@ -63,6 +65,8 @@ def setup_logging_with_file(
 
     stdout_handler = logging.StreamHandler(sys.stdout)
     stdout_handler.setFormatter(JsonFormatter())
+    # Silence standard output JSON logs entirely (only allow critical errors to surface)
+    stdout_handler.setLevel(logging.CRITICAL)
     handlers.append(stdout_handler)
 
     if log_path:
@@ -70,6 +74,7 @@ def setup_logging_with_file(
         path.parent.mkdir(parents=True, exist_ok=True)
         file_handler = logging.FileHandler(path, encoding="utf-8")
         file_handler.setFormatter(JsonFormatter())
+        file_handler.setLevel(level)
         handlers.append(file_handler)
 
     root = logging.getLogger()

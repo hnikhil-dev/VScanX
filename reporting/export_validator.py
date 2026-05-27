@@ -94,17 +94,31 @@ def sanitize_for_export(results: Dict[str, Any]) -> Dict[str, Any]:
                 # Basic redaction patterns
                 import re
 
-                # Redact bearer tokens
-                evidence = re.sub(
-                    r"Bearer\s+[A-Za-z0-9\-_]+", "Bearer [REDACTED]", evidence
-                )
-                # Redact API keys (basic pattern)
-                evidence = re.sub(
-                    r"[A-Za-z0-9]{32,}",
-                    lambda m: "[REDACTED]" if len(m.group()) > 32 else m.group(),
-                    evidence,
-                )
-                sanitized_finding["evidence"] = evidence
+                if isinstance(evidence, dict):
+                    text = str(evidence.get("summary", ""))
+                    text = re.sub(
+                        r"Bearer\s+[A-Za-z0-9\-_]+", "Bearer [REDACTED]", text
+                    )
+                    text = re.sub(
+                        r"[A-Za-z0-9]{32,}",
+                        lambda m: "[REDACTED]" if len(m.group()) > 32 else m.group(),
+                        text,
+                    )
+                    evidence["summary"] = text
+                    sanitized_finding["evidence"] = evidence
+                else:
+                    evidence = str(evidence)
+                    # Redact bearer tokens
+                    evidence = re.sub(
+                        r"Bearer\s+[A-Za-z0-9\-_]+", "Bearer [REDACTED]", evidence
+                    )
+                    # Redact API keys (basic pattern)
+                    evidence = re.sub(
+                        r"[A-Za-z0-9]{32,}",
+                        lambda m: "[REDACTED]" if len(m.group()) > 32 else m.group(),
+                        evidence,
+                    )
+                    sanitized_finding["evidence"] = evidence
 
             sanitized_findings.append(sanitized_finding)
 
