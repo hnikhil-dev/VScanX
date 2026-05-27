@@ -415,6 +415,20 @@ SCAN_PROFILES = {
         "selective_scanning": True,
         "delay": 3.0,
     },
+    "web3": {
+        "description": "Smart Contract vulnerability scan",
+        "check_web3": True,
+        "max_threads": 5,
+        "delay": 1.0,
+        "port_range": (80, 443),
+    },
+    "agentic": {
+        "description": "AI/LLM Agent security scan",
+        "check_agentic": True,
+        "max_threads": 5,
+        "delay": 1.0,
+        "port_range": (80, 443),
+    },
 }
 
 # Output Formats

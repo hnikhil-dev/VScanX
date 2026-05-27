@@ -35,6 +35,8 @@ class PluginManager:
         specs: List[ModuleSpec] = []
         specs.extend(self._discover_package("modules.web"))
         specs.extend(self._discover_package("modules.network"))
+        specs.extend(self._discover_package("modules.web3"))
+        specs.extend(self._discover_package("modules.agentic"))
         specs.extend(self._discover_plugins_dir(self.plugins_dir))
 
         # Dedup by key, prefer built-in over external if collision

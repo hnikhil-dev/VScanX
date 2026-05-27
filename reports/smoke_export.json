@@ -1,0 +1,24 @@
+{
+  "target": "http://example.local",
+  "scan_type": "web",
+  "start_time": "2026-05-27T16:10:32.874516",
+  "duration": 0.5,
+  "authenticated": false,
+  "errors": [],
+  "findings": [
+    {
+      "module": "XSS Detector",
+      "severity": "HIGH",
+      "description": "Reflected XSS in 'q'",
+      "parameter": "q",
+      "evidence": "<script>alert(1)</script>"
+    }
+  ],
+  "modules": [
+    {
+      "module": "XSS Detector",
+      "start_time": "2026-05-27T16:10:32.874526",
+      "end_time": "2026-05-27T16:10:32.874527"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "scan_id": null,
+  "metrics": {
+    "started_at": 1779870367.861842,
+    "uptime": 147.342,
+    "counters": {
+      "findings.INFO": 1
+    },
+    "timings": {
+      "module.Socket Port Scanner.seconds": 21.257,
+      "module.SQL Injection Detector.seconds": 31.565,
+      "scan_total_seconds": 147.29
+    }
+  }
+}

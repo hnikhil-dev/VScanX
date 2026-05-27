@@ -1,0 +1,29 @@
+{
+  "scan_id": null,
+  "metrics": {
+    "started_at": 1778177400.3533065,
+    "uptime": 355.269,
+    "counters": {
+      "findings.INFO": 76,
+      "findings.MEDIUM": 7,
+      "findings.LOW": 8,
+      "findings.HIGH": 3
+    },
+    "timings": {
+      "module.Socket Port Scanner.seconds": 15.119,
+      "module.Tech Stack Fingerprinter.seconds": 0.947,
+      "module.HTTP Headers Analyzer.seconds": 0.506,
+      "module.CVE Database Checker.seconds": 0.612,
+      "module.XSS Detector.seconds": 2.263,
+      "module.SQL Injection Detector.seconds": 3.278,
+      "module.Rate Limit Checker.seconds": 4.302,
+      "module.Authentication Bypass Detector.seconds": 7.534,
+      "module.IDOR Detector.seconds": 0.338,
+      "module.HTTP Parameter Pollution Detector.seconds": 0.0,
+      "module.JS Secret Analyzer.seconds": 0.0,
+      "module.Subdomain Recon Suite.seconds": 0.192,
+      "module.Open Redirect Prober.seconds": 0.0,
+      "scan_total_seconds": 355.15
+    }
+  }
+}

@@ -77,6 +77,9 @@ class Orchestrator:
         state_dir: str = ".vscanx_state",
         resume: bool = False,
         strict_events: bool = False,
+        rpc_url: str = None,
+        contract: str = None,
+        abi: str = None,
     ):
         """
         Initialize orchestrator with available modules and optional authentication
@@ -103,6 +106,9 @@ class Orchestrator:
         self.defensive_variants_strict = defensive_variants_strict
         self.state_store = ScanStateStore(root_dir=state_dir)
         self.resume = resume
+        self.rpc_url = rpc_url
+        self.contract = contract
+        self.abi = abi
         self._log_extra = {"scan_id": scan_id} if scan_id else {}
         # Thread-safety for adding module results
         self._lock = threading.Lock()
@@ -127,6 +133,7 @@ class Orchestrator:
             max_concurrency=max_threads,
             request_quota=None,
         )
+        self.request_handler = shared_handler
         pm = PluginManager()
         specs = pm.discover()
         # Payload overrides keyed by normalized module name
@@ -157,6 +164,19 @@ class Orchestrator:
             "JS Secret Analyzer": "js_secret_analyzer",
             "Subdomain Recon Suite": "subdomain_recon",
             "Open Redirect Prober": "open_redirect_prober",
+            # OWASP 2026 Web
+            "Crypto and TLS Analyzer": "crypto_and_tls_analyzer",
+            "OS Command Injection Detector": "os_command_injection_detector",
+            "Error Handling Prober": "error_handling_prober",
+            # OWASP 2026 Web3
+            "Smart Contract Access Control Checker": "smart_contract_access_control_checker",
+            "Smart Contract Reentrancy Analyzer": "smart_contract_reentrancy_analyzer",
+            "Smart Contract Weak Randomness Detector": "smart_contract_weak_randomness_detector",
+            # OWASP 2026 Agentic (AI)
+            "Agentic Prompt Injection Fuzzer": "agentic_prompt_injection_fuzzer",
+            "Agentic Code Execution Prober": "agentic_code_execution_prober",
+            "Agentic Memory Poisoning Fuzzer": "agentic_memory_poisoning_fuzzer",
+            "Agentic Data Exfiltration Fuzzer": "agentic_data_exfiltration_fuzzer",
         }
         for friendly_name, legacy_key in legacy_map.items():
             key = name_to_key.get(friendly_name)
@@ -327,6 +347,12 @@ class Orchestrator:
 
         if scan_type in ["web", "mixed"]:
             await self._execute_web_scans_async(target, profile_config)
+
+        if scan_type == "web3":
+            await self._execute_web3_scans_async(target, profile_config)
+
+        if scan_type == "agentic":
+            await self._execute_agentic_scans_async(target, profile_config)
 
         # Phase 5: Elite automation post-processing (opt-in)
         if self.elite_automation:
@@ -812,6 +838,9 @@ class Orchestrator:
         run_js_secrets = True
         run_subdomain_recon = True
         run_open_redirect = True
+        run_crypto_tls = True
+        run_cmd_injection = True
+        run_error_handling = True
         dir_enum_recursive = False
         run_crawler = True
         crawl_max_urls = 60
@@ -831,6 +860,9 @@ class Orchestrator:
             run_js_secrets = profile_config.get("check_js_secrets", True)
             run_subdomain_recon = profile_config.get("check_subdomain_recon", True)
             run_open_redirect = profile_config.get("check_open_redirect", True)
+            run_crypto_tls = profile_config.get("check_crypto_tls", True)
+            run_cmd_injection = profile_config.get("check_cmd_injection", True)
+            run_error_handling = profile_config.get("check_error_handling", True)
             dir_enum_recursive = profile_config.get("dir_enum_recursive", False)
             run_crawler = profile_config.get("crawl_enabled", True)
             crawl_max_urls = int(profile_config.get("crawl_max_urls", 60))
@@ -949,6 +981,8 @@ class Orchestrator:
         skip_hpp = False
         skip_subdomain_recon = False
         skip_open_redirect = False
+        skip_cmd_injection = False
+        skip_error_handling = False
         if selective_scanning:
             import ipaddress
             from urllib.parse import parse_qs, urlparse
@@ -962,6 +996,8 @@ class Orchestrator:
                 skip_idor = True
                 skip_hpp = True
                 skip_open_redirect = True
+                skip_cmd_injection = True
+                skip_error_handling = True
                 logger.info(
                     "selective_scan_skip_param_modules",
                     extra={"reason": "no_query_params", **self._log_extra},
@@ -1045,12 +1081,16 @@ class Orchestrator:
                 skip_idor = True
                 skip_hpp = True
                 skip_open_redirect = True
+                skip_cmd_injection = True
+                skip_error_handling = True
             else:
                 skip_xss = False
                 skip_sqli = False
                 skip_idor = False
                 skip_hpp = False
                 skip_open_redirect = False
+                skip_cmd_injection = False
+                skip_error_handling = False
 
         if run_headers:
             logger.info("Running HTTP Headers Analyzer", extra=self._log_extra)
@@ -1093,11 +1133,23 @@ class Orchestrator:
             logger.info("Running Directory Enumerator", extra=self._log_extra)
             schedule_if_allowed("dir_enum", "Directory Enumerator")
 
+        if run_crypto_tls:
+            logger.info("Running Crypto and TLS Analyzer", extra=self._log_extra)
+            schedule_if_allowed("crypto_and_tls_analyzer", "Crypto and TLS Analyzer")
+
+        if run_cmd_injection and not skip_cmd_injection:
+            logger.info("Running OS Command Injection Detector", extra=self._log_extra)
+            schedule_if_allowed("os_command_injection_detector", "OS Command Injection Detector")
+
+        if run_error_handling and not skip_error_handling:
+            logger.info("Running Error Handling Prober", extra=self._log_extra)
+            schedule_if_allowed("error_handling_prober", "Error Handling Prober")
+
         # Parameter-based modules should run on discovered param URLs, not just the start URL
         param_targets = list((crawl_artifacts.get("param_urls") or []))[:25]
         if param_targets:
             # Expand tasks by injecting per-URL runs for specific modules
-            param_module_keys = {"xss_detect", "sqli_detect", "idor_detector", "hpp_detector", "open_redirect_prober"}
+            param_module_keys = {"xss_detect", "sqli_detect", "idor_detector", "hpp_detector", "open_redirect_prober", "os_command_injection_detector", "error_handling_prober"}
             expanded = []
             for key, label in tasks:
                 if key in param_module_keys:
@@ -1125,6 +1177,93 @@ class Orchestrator:
         else:
             for key, label, t in tasks_with_targets:
                 await run_module_with_target(key, label, t)
+
+    async def _execute_web3_scans_async(
+        self, target: str, profile_config: Dict = None
+    ) -> None:
+        """
+        Execute all Web3/Smart Contract scans
+        """
+        logger.info("Executing Web3 Smart Contract Scan Modules")
+        
+        web3_modules = [
+            ("smart_contract_access_control_checker", "Smart Contract Access Control Checker"),
+            ("smart_contract_reentrancy_analyzer", "Smart Contract Reentrancy Analyzer"),
+            ("smart_contract_weak_randomness_detector", "Smart Contract Weak Randomness Detector")
+        ]
+        
+        for module_key, label in web3_modules:
+            runner = self.modules.get(module_key)
+            if not runner:
+                continue
+            
+            try:
+                self.event_bus.publish("module.started", {"module": label})
+                module_start = time.time()
+                
+                result = await runner.run_async(
+                    target,
+                    rpc_url=self.rpc_url,
+                    contract=self.contract,
+                    abi=self.abi,
+                    verbose=self.verbose
+                )
+                
+                module_end = time.time()
+                result.setdefault("module", label)
+                result.setdefault(
+                    "start_time", datetime.fromtimestamp(module_start).isoformat()
+                )
+                result.setdefault(
+                    "end_time", datetime.fromtimestamp(module_end).isoformat()
+                )
+                result.setdefault("duration", round(module_end - module_start, 3))
+                
+                self._add_module_result(result)
+            except Exception as e:
+                logger.exception("%s error: %s", label, e, extra=self._log_extra)
+                self._add_module_result({"module": label, "error": str(e)})
+
+    async def _execute_agentic_scans_async(
+        self, target: str, profile_config: Dict = None
+    ) -> None:
+        """
+        Execute all Agentic (AI/LLM) applications security scans
+        """
+        logger.info("Executing Agentic Application (AI/LLM) Scan Modules")
+
+        agentic_modules = [
+            ("agentic_prompt_injection_fuzzer", "Agentic Prompt Injection Fuzzer"),
+            ("agentic_code_execution_prober", "Agentic Code Execution Prober"),
+            ("agentic_memory_poisoning_fuzzer", "Agentic Memory Poisoning Fuzzer"),
+            ("agentic_data_exfiltration_fuzzer", "Agentic Data Exfiltration Fuzzer")
+        ]
+
+        for module_key, label in agentic_modules:
+            runner = self.modules.get(module_key)
+            if not runner:
+                continue
+
+            try:
+                self.event_bus.publish("module.started", {"module": label})
+                module_start = time.time()
+
+                result = await runner.run_async(target, verbose=self.verbose)
+
+                module_end = time.time()
+                result.setdefault("module", label)
+                result.setdefault(
+                    "start_time", datetime.fromtimestamp(module_start).isoformat()
+                )
+                result.setdefault(
+                    "end_time", datetime.fromtimestamp(module_end).isoformat()
+                )
+                result.setdefault("duration", round(module_end - module_start, 3))
+
+                self._add_module_result(result)
+            except Exception as e:
+                logger.exception("%s error: %s", label, e, extra=self._log_extra)
+                self._add_module_result({"module": label, "error": str(e)})
 
     def get_summary(self) -> Dict[str, Any]:
         """

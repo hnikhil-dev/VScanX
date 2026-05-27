@@ -94,13 +94,28 @@ Examples:
     # Required arguments
     parser.add_argument("-t", "--target", help="Target URL or IP address")
 
-    # Scan options
     parser.add_argument(
         "-s",
         "--scan-type",
-        choices=["web", "network", "mixed"],
+        choices=["web", "network", "mixed", "web3", "agentic"],
         default="mixed",
         help="Type of scan to perform (default: mixed)",
+    )
+
+    parser.add_argument(
+        "--rpc-url",
+        help="RPC URL for Web3 smart contract scanning (e.g. Infura/Alchemy or local network)",
+        default=None,
+    )
+    parser.add_argument(
+        "--contract",
+        help="Target smart contract address to scan",
+        default=None,
+    )
+    parser.add_argument(
+        "--abi",
+        help="Path to smart contract ABI JSON file (optional)",
+        default=None,
     )
 
     parser.add_argument(
@@ -603,7 +618,8 @@ def main():
         for key in ["check_directories", "check_headers", "check_cve", 
                     "check_rate_limit", "check_tech_fingerprint", "check_idor",
                     "check_auth_bypass", "check_hpp", "check_js_secrets",
-                    "check_subdomain_recon", "check_open_redirect", "check_xss", "check_sqli"]:
+                    "check_subdomain_recon", "check_open_redirect", "check_xss", "check_sqli",
+                    "check_crypto_tls", "check_cmd_injection", "check_error_handling"]:
             profile_config[key] = False
         
         # Turn off selective scanning so it doesn't arbitrarily skip explicitly requested modules
@@ -617,7 +633,10 @@ def main():
             "idor": "check_idor", "auth": "check_auth_bypass", "hpp": "check_hpp",
             "secrets": "check_js_secrets", "subdomain": "check_subdomain_recon",
             "redirect": "check_open_redirect", "sqli": "check_sqli", "xss": "check_xss",
-            "sql": "check_sqli", "sqlinjection": "check_sqli"
+            "sql": "check_sqli", "sqlinjection": "check_sqli",
+            "crypto": "check_crypto_tls", "tls": "check_crypto_tls",
+            "cmd_injection": "check_cmd_injection", "cmd": "check_cmd_injection",
+            "error_handling": "check_error_handling", "error": "check_error_handling"
         }
         for mod in only_modules:
             if mod in module_map:
@@ -666,6 +685,9 @@ def main():
             args.strict_events
             or os.environ.get("VSCANX_STRICT_EVENTS", "").strip().lower() in ["1", "true", "yes", "y"]
         ),
+        rpc_url=args.rpc_url,
+        contract=args.contract,
+        abi=args.abi,
     )
 
     # Initialize CLI reporter to catch and style output events

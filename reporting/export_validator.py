@@ -124,13 +124,15 @@ def sanitize_for_export(results: Dict[str, Any]) -> Dict[str, Any]:
 
         sanitized["findings"] = sanitized_findings
 
-    # Remove per-module 'findings' entries (they are a presentation convenience, not part of the schema)
+    # Strip module entries to only schema-allowed keys, preventing additionalProperties
+    # validation failures from extra keys like 'target', 'tech_profile', 'found_paths', etc.
+    _MODULE_SCHEMA_KEYS = {"module", "start_time", "end_time", "duration", "error", "artifacts", "findings"}
     if "modules" in sanitized and isinstance(sanitized["modules"], list):
         sanitized_modules = []
         for module in sanitized["modules"]:
-            mod_copy = module.copy()
-            if "findings" in mod_copy:
-                mod_copy.pop("findings")
+            mod_copy = {k: v for k, v in module.items() if k in _MODULE_SCHEMA_KEYS}
+            # Remove per-module 'findings' (presentation convenience, not part of schema)
+            mod_copy.pop("findings", None)
             sanitized_modules.append(mod_copy)
         sanitized["modules"] = sanitized_modules
 

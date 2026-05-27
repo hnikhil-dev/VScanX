@@ -63,7 +63,7 @@ ScanResultSchema = {
     ],
     "properties": {
         "target": {"type": "string"},
-        "scan_type": {"type": "string", "enum": ["web", "network", "mixed"]},
+        "scan_type": {"type": "string", "enum": ["web", "network", "mixed", "web3", "agentic"]},
         "authenticated": {"type": "boolean"},
         "start_time": {"type": "string"},
         "duration": {"type": "number"},

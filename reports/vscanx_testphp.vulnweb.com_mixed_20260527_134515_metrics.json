@@ -1,0 +1,23 @@
+{
+  "scan_id": null,
+  "metrics": {
+    "started_at": 1779867708.3965573,
+    "uptime": 2007.603,
+    "counters": {
+      "findings.INFO": 3,
+      "findings.MEDIUM": 1
+    },
+    "timings": {
+      "module.Socket Port Scanner.seconds": 21.052,
+      "module.Tech Stack Fingerprinter.seconds": 31.448,
+      "module.HTTP Headers Analyzer.seconds": 31.358,
+      "module.CVE Database Checker.seconds": 31.637,
+      "module.Rate Limit Checker.seconds": 31.461,
+      "module.Authentication Bypass Detector.seconds": 125.808,
+      "module.JS Secret Analyzer.seconds": 31.55,
+      "module.Subdomain Recon Suite.seconds": 0.073,
+      "module.Directory Enumerator.seconds": 1608.535,
+      "scan_total_seconds": 2007.49
+    }
+  }
+}

@@ -1,56 +1,40 @@
 {
-  "start_url": "http://placement-tracker-pink.vercel.app/",
+  "start_url": "http://127.0.0.1:8080/search?q=test",
   "visited_count": 4,
   "urls": [
-    "http://placement-tracker-pink.vercel.app/",
-    "http://placement-tracker-pink.vercel.app/index.html",
-    "http://placement-tracker-pink.vercel.app/register.html",
-    "http://placement-tracker-pink.vercel.app/reset-password.html"
+    "http://127.0.0.1:8080/",
+    "http://127.0.0.1:8080/comment?text=hello",
+    "http://127.0.0.1:8080/profile?name=John",
+    "http://127.0.0.1:8080/search?q=test"
   ],
-  "param_urls": [],
-  "param_names": [],
-  "params_by_url": {},
-  "scripts": [
-    "http://placement-tracker-pink.vercel.app/js/auth.js",
-    "http://placement-tracker-pink.vercel.app/js/config.js"
+  "param_urls": [
+    "http://127.0.0.1:8080/comment?text=hello",
+    "http://127.0.0.1:8080/profile?name=John",
+    "http://127.0.0.1:8080/search?q=test"
   ],
-  "forms": [
-    {
-      "page": "http://placement-tracker-pink.vercel.app/",
-      "action": "http://placement-tracker-pink.vercel.app/",
-      "method": "GET",
-      "inputs": []
-    },
-    {
-      "page": "http://placement-tracker-pink.vercel.app/register.html",
-      "action": "http://placement-tracker-pink.vercel.app/register.html",
-      "method": "GET",
-      "inputs": []
-    },
-    {
-      "page": "http://placement-tracker-pink.vercel.app/reset-password.html",
-      "action": "http://placement-tracker-pink.vercel.app/reset-password.html",
-      "method": "GET",
-      "inputs": []
-    },
-    {
-      "page": "http://placement-tracker-pink.vercel.app/reset-password.html",
-      "action": "http://placement-tracker-pink.vercel.app/reset-password.html",
-      "method": "GET",
-      "inputs": []
-    },
-    {
-      "page": "http://placement-tracker-pink.vercel.app/index.html",
-      "action": "http://placement-tracker-pink.vercel.app/index.html",
-      "method": "GET",
-      "inputs": []
-    }
+  "param_names": [
+    "name",
+    "q",
+    "text"
   ],
+  "params_by_url": {
+    "http://127.0.0.1:8080/search?q=test": [
+      "q"
+    ],
+    "http://127.0.0.1:8080/comment?text=hello": [
+      "text"
+    ],
+    "http://127.0.0.1:8080/profile?name=John": [
+      "name"
+    ]
+  },
+  "scripts": [],
+  "forms": [],
   "api_endpoints": [],
   "spa_routes": [],
   "diagnostics": {
-    "max_urls": 150,
-    "max_depth": 3,
+    "max_urls": 60,
+    "max_depth": 2,
     "max_frontier": 500,
     "max_parse_chars": 200000,
     "frontier_highwater": 2,

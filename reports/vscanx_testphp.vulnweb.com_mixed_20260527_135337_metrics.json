@@ -1,0 +1,14 @@
+{
+  "scan_id": null,
+  "metrics": {
+    "started_at": 1779870101.8322794,
+    "uptime": 115.614,
+    "counters": {
+      "findings.INFO": 1
+    },
+    "timings": {
+      "module.Socket Port Scanner.seconds": 21.162,
+      "scan_total_seconds": 115.54
+    }
+  }
+}

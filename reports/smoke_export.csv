@@ -1,0 +1,2 @@
+Module,Severity,Finding,Details
+XSS Detector,HIGH,Reflected XSS in 'q',<script>alert(1)</script>
