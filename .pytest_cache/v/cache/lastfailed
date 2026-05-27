@@ -1,5 +1,1 @@
-{
-  "tests/test_modules.py::TestBaseModule": true,
-  "tests/test_modules.py::TestValidation": true,
-  "tests/test_modules.py::TestPortScanner": true
-}
+{}

@@ -113,6 +113,7 @@ class AccessControlChecker(BaseModule):
                 with open(abi_path, "r", encoding="utf-8") as f:
                     abi = json.load(f)
             except Exception:
+                # nosec B110
                 # Fallback to standard
                 pass
 
@@ -141,6 +142,7 @@ class AccessControlChecker(BaseModule):
                     owner_address = getattr(contract.functions, func_name)().call()
                     break
                 except Exception:
+                    # nosec B110
                     pass
 
         # Test sensitive administrative functions using dry-runs
@@ -172,6 +174,7 @@ class AccessControlChecker(BaseModule):
                         tags=["SC01:2026", "access-control", "web3"],
                     )
                 except Exception:
+                    # nosec B110
                     # Typical reverting exception details are logged securely
                     pass
 

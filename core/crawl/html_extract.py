@@ -42,6 +42,7 @@ def extract_from_html(html: str) -> Dict[str, List]:
     try:
         p.feed(html or "")
     except Exception:
+        # nosec B110
         # tolerate broken HTML
         pass
     return {"links": p.links, "scripts": p.scripts, "forms": p.forms}

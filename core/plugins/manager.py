@@ -70,8 +70,10 @@ class PluginManager:
 
             try:
                 instances[s.key] = s.cls(**kwargs)  # type: ignore[arg-type]
-            except Exception:
+            except Exception as e:
                 # Skip broken plugin gracefully
+                import logging
+                logging.getLogger("vscanx.plugins").debug("Failed to instantiate plugin class %s: %s", s.key, e)
                 continue
         return instances
 
@@ -88,7 +90,9 @@ class PluginManager:
             full = f"{pkg_name}.{mod_name}"
             try:
                 m = importlib.import_module(full)
-            except Exception:
+            except Exception as e:
+                import logging
+                logging.getLogger("vscanx.plugins").debug("Failed to import module %s: %s", full, e)
                 continue
             specs.extend(self._extract_module_specs(m, origin=full))
         return specs
@@ -109,7 +113,9 @@ class PluginManager:
                     mod = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(mod)  # type: ignore[attr-defined]
                     specs.extend(self._extract_module_specs(mod, origin=str(py)))
-            except Exception:
+            except Exception as e:
+                import logging
+                logging.getLogger("vscanx.plugins").debug("Failed to load external plugin %s: %s", py, e)
                 continue
         return specs
 

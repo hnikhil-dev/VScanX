@@ -700,8 +700,8 @@ def main():
                 "profile_desc": profile_config.get("description"),
             },
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logging.getLogger("vscanx.cli").debug("Event publishing failed: %s", e)
 
     # Execute scan
     results = orchestrator.execute_scan(

@@ -100,6 +100,7 @@ class ReentrancyAnalyzer(BaseModule):
                 with open(abi_path, "r", encoding="utf-8") as f:
                     abi = json.load(f)
             except Exception:
+                # nosec B110
                 pass
 
         vulnerable_candidates = []

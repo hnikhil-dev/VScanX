@@ -61,8 +61,9 @@ class EventBus:
                 # If handler returns a dict, allow it to enrich the event payload.
                 if isinstance(res, dict) and isinstance(payload, dict):
                     payload.update(res)
-            except Exception:
+            except Exception as e:
                 # Never allow an event handler bug to break scanning.
+                logger.debug("Event handler execution failed: %s", e)
                 continue
 
         return payload
@@ -84,5 +85,6 @@ class EventBus:
                 res = h(event_type, payload)
                 if isinstance(res, Awaitable):
                     await res
-            except Exception:
+            except Exception as e:
+                logger.debug("Async event handler execution failed: %s", e)
                 continue

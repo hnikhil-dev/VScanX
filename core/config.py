@@ -61,8 +61,8 @@ SUBDOMAIN_WORDLIST = [
 
 JS_SECRET_PATTERNS = {
     "aws_access_key": r"AKIA[0-9A-Z]{16}",
-    "github_token": r"ghp_[A-Za-z0-9]{36}",
-    "slack_token": r"xox[baprs]-[A-Za-z0-9-]{10,}",
+    "github_token": r"ghp_[A-Za-z0-9]{36}",  # nosec B105
+    "slack_token": r"xox[baprs]-[A-Za-z0-9-]{10,}",  # nosec B105
     "private_key_block": r"-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----",
     "generic_api_key": r"(?i)(api[_-]?key|token|secret)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}['\"]",
 }

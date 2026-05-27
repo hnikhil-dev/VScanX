@@ -336,8 +336,8 @@ class Orchestrator:
                         if h and hasattr(h, "set_request_quota"):
                             h.set_request_quota(int(rq))
                             break
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Quota setting failed: %s", e)
         if scan_type in ["network", "mixed"]:
             if "port_scan" in self.modules:
                 await asyncio.to_thread(self._execute_network_scan, target, port_range)
@@ -404,8 +404,8 @@ class Orchestrator:
                     },
                 }
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Internal scan graph construction failed: %s", e)
 
         # Finalize timing
         self.end_time = time.time()
@@ -418,8 +418,8 @@ class Orchestrator:
         try:
             if self.scan_id:
                 self.state_store.save(self.scan_id, "results", self.results)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Scan result state persistence failed: %s", e)
 
         # Schema validation for safety before returning
         try:
@@ -635,8 +635,8 @@ class Orchestrator:
                     )
                     if isinstance(enriched, dict):
                         normalized = enriched.get("normalized", normalized) or normalized
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Finding normalization event failed: %s", e)
 
                 module_findings.append(normalized)
 
@@ -681,8 +681,8 @@ class Orchestrator:
                             "timestamp": finding_obj.timestamp,
                         },
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Finding added event failed: %s", e)
                 try:
                     if finding_obj.verification:
                         self.event_bus.publish(
@@ -697,8 +697,8 @@ class Orchestrator:
                                 "metrics": finding_obj.verification,
                             },
                         )
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Verification completed event failed: %s", e)
             except Exception as e:
                 logger.exception("Failed to normalize finding from %s: %s", module_name, e)
                 self.scan_result.errors.append(f"Normalization error in module {module_name}: {e}")
@@ -713,8 +713,8 @@ class Orchestrator:
                 "module.completed",
                 {"module": module_name, "duration": duration, "error": module_meta.get("error")},
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Module completed event failed: %s", e)
 
     def _execute_network_scan(self, target: str, port_range: tuple = None) -> None:
         """
@@ -756,8 +756,8 @@ class Orchestrator:
             # Run port scanner
             try:
                 self.event_bus.publish("module.started", {"module": "Port Scanner"})
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Port Scanner start event failed: %s", e)
             scanner = self.modules["port_scan"]
             module_start = time.time()
             if port_range:
@@ -776,8 +776,8 @@ class Orchestrator:
                     result["artifacts"].setdefault("module_spec", spec)
                 else:
                     result["artifacts"] = {"module_spec": spec}
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Port Scanner metadata extraction failed: %s", e)
             self._add_module_result(result)
 
         except Exception as e:
@@ -902,8 +902,8 @@ class Orchestrator:
             try:
                 try:
                     self.event_bus.publish("module.started", {"module": label})
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Module started event failed for %s: %s", label, e)
                 runner = self.modules[module_key]
                 module_start = time.time()
                 if hasattr(runner, "run_async"):
@@ -925,8 +925,8 @@ class Orchestrator:
                         result["artifacts"].setdefault("module_spec", spec)
                     else:
                         result["artifacts"] = {"module_spec": spec}
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Module metadata extraction failed for %s: %s", label, e)
                 self._add_module_result(result)
             except Exception as e:
                 logger.exception("%s error: %s", label, e, extra=self._log_extra)
@@ -1031,8 +1031,8 @@ class Orchestrator:
                         "spa_routes_sample": list((crawl_artifacts.get("spa_routes") or []))[:10],
                     },
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Crawl inventory ready event failed: %s", e)
 
         # Better crawl intelligence: selective parameter-based module scheduling
         # should depend on discovered param-bearing URLs, not only the start URL.

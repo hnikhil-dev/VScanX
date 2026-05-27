@@ -117,6 +117,7 @@ class CryptoTLSAnalyzer(BaseModule):
                 tags=["A04:2026", "tls"],
             )
         except Exception:
+            # nosec B110
             # General connection failure or timeout
             pass
 

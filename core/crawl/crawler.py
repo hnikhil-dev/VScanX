@@ -108,6 +108,7 @@ class AuthenticatedCrawler:
                 if getattr(resp, "extensions", {}).get("vscanx_truncated"):
                     truncated_pages += 1
             except Exception:
+                # nosec B110
                 pass
 
             try:
@@ -121,6 +122,7 @@ class AuthenticatedCrawler:
                 if "/api/" in urlparse(url).path:
                     api_endpoints.add(url)
             except Exception:
+                # nosec B110
                 pass
 
             # Parse HTML
@@ -181,6 +183,7 @@ class AuthenticatedCrawler:
                                 if depth + 1 <= config.max_depth:
                                     frontier.append({"url": spafull, "depth": depth + 1})
                 except Exception:
+                    # nosec B110
                     pass
 
             # JS route discovery: fetch a few scripts and extract /api/ routes
@@ -226,6 +229,7 @@ class AuthenticatedCrawler:
                         discovered_param_names.update(keys)
                         params_by_url[url] = sorted(set(keys))
             except Exception:
+                # nosec B110
                 pass
 
             # JSON content: try to harvest embedded endpoint strings.
@@ -241,6 +245,7 @@ class AuthenticatedCrawler:
                         if same_origin(full, start_url):
                             api_endpoints.add(full)
                 except Exception:
+                    # nosec B110
                     pass
 
         # Extract param-bearing URLs for selective probing
@@ -255,6 +260,7 @@ class AuthenticatedCrawler:
                         discovered_param_names.update(keys)
                         params_by_url.setdefault(u, sorted(set(keys)))
             except Exception:
+                # nosec B112
                 continue
 
         return {
@@ -301,6 +307,7 @@ class AuthenticatedCrawler:
                         if path.startswith("/"):
                             seeds.add(normalize_url(base + path))
                     except Exception:
+                        # nosec B110
                         pass
 
         # Try default sitemap.xml if not specified

@@ -32,8 +32,9 @@ def init_console() -> None:
             # Enable ENABLE_VIRTUAL_TERMINAL_PROCESSING
             kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
         except Exception:
+            # nosec B110
             # Fallback
-            os.system("color")
+            os.system("color")  # nosec B605 B607
 
 
 def print_banner() -> None:

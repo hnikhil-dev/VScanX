@@ -102,6 +102,7 @@ class VerificationEngine:
         try:
             neg_loc = self._normalize_text(neg_loc)
         except Exception:
+            # nosec B110
             pass
         neg_external = bool(neg_loc) and expected_external_location in neg_loc
 

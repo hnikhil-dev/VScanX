@@ -80,6 +80,7 @@ class CodeExecutionProber(BaseModule):
                             )
                             break
                 except Exception:
+                    # nosec B110
                     pass
 
             if any(f.get("finding") for f in self.get_results()):

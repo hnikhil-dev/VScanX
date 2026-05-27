@@ -139,8 +139,8 @@ class RequestHandler:
                 response.extensions["vscanx_truncated"] = True
                 response.extensions["vscanx_original_size"] = len(content)
                 self._stats["responses_truncated"] += 1
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Truncation failure: %s", e)
         return response
 
     def _redact_headers(self, headers: Dict[str, str]) -> Dict[str, str]:
@@ -328,7 +328,7 @@ class RequestHandler:
 
     def _backoff_sleep(self, attempt: int) -> None:
         base = 0.4 * (2**attempt)
-        jitter = random.random() * 0.25
+        jitter = random.random() * 0.25  # nosec B311
         time.sleep(min(6.0, base + jitter))
 
     async def _rate_limit_async(self) -> None:
@@ -517,7 +517,7 @@ class RequestHandler:
                     return None
                 self._stats["retries_total"] += 1
                 base = 0.4 * (2**attempt)
-                jitter = random.random() * 0.25
+                jitter = random.random() * 0.25  # nosec B311
                 await asyncio.sleep(min(6.0, base + jitter))
         return None
 
@@ -572,7 +572,7 @@ class RequestHandler:
                     return None
                 self._stats["retries_total"] += 1
                 base = 0.4 * (2**attempt)
-                jitter = random.random() * 0.25
+                jitter = random.random() * 0.25  # nosec B311
                 await asyncio.sleep(min(6.0, base + jitter))
         return None
 

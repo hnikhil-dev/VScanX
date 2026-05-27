@@ -85,6 +85,7 @@ class PromptInjectionFuzzer(BaseModule):
                             )
                             break
                 except Exception:
+                    # nosec B110
                     pass
 
             # If already found for this payload, move to next

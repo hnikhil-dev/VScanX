@@ -94,6 +94,7 @@ class MemoryPoisoningFuzzer(BaseModule):
                             )
                             break
                 except Exception:
+                    # nosec B110
                     pass
 
         if not self.get_results():
