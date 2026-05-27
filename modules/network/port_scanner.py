@@ -21,12 +21,13 @@ class PortScanner(BaseModule):
     Identifies open ports and attempts basic service detection
     """
 
-    def __init__(self):
+    def __init__(self, max_threads: int = 10):
         super().__init__()
         self.name = "Port Scanner"
         self.description = "TCP port scanning and service detection"
         self.version = "1.0.0"
         self.open_ports = []
+        self.max_threads = max_threads
 
     def run(self, target: str, port_range: tuple = DEFAULT_PORT_RANGE, **kwargs) -> Dict[str, Any]:
         """
