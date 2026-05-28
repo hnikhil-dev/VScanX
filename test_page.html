@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Page for VScanX</title>
+</head>
+<body>
+    <h1>Search Results</h1>
+    <script>
+        // Get URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const query = params.get('q');
+        const name = params.get('name');
+        
+        // Vulnerable: Directly inserting user input
+        if (query) {
+            document.write('<p>You searched for: ' + query + '</p>');
+        }
+        
+        if (name) {
+            document.write('<p>Hello, ' + name + '!</p>');
+        }
+    </script>
+</body>
+</html>

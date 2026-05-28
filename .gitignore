@@ -66,10 +66,6 @@ htmlcov/
 .vscanx_state/
 
 # Local test servers and logs
-test_login_server.py
-vulnerable_server.py
-test_phase2.py
-test_page.html
 secrets.report
 fix_issues.py
 report_gen_fix.py
