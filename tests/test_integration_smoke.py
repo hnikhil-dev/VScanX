@@ -41,6 +41,10 @@ def test_end_to_end_smoke():
             "html,json,csv,txt",
             "-o",
             outname,
+            "--profile",
+            "quick",
+            "--delay",
+            "0.05",
         ]
 
         print("[TEST] Running VScanX CLI...")

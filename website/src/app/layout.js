@@ -18,6 +18,11 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "VScanX | Verification-Driven Security Analysis",
   description: "Reproducible security workflows, state evolution tracking, and low-noise vulnerability verification for enterprise-grade applications.",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }) {

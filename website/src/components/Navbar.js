@@ -37,7 +37,11 @@ export default function Navbar() {
             {/* Logo / Wordmark */}
             <div className="flex items-center gap-3">
               <LinkNext href="/" className="flex items-center gap-3 group">
-                <span className="font-mono text-zinc-400 group-hover:text-zinc-200 transition-colors duration-150 font-bold text-base">&lt;/&gt;</span>
+                <img 
+                  src="/logo.png" 
+                  alt="VScanX Logo" 
+                  className="h-8 w-8 object-contain rounded-md"
+                />
                 <span className="font-sans font-bold text-xl tracking-tight text-zinc-50 group-hover:text-white transition-colors duration-150">
                   VScanX
                 </span>
