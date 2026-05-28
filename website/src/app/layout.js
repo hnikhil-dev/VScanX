@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ContextMenu from "@/components/ContextMenu";
 import AssistantWrapper from "@/components/Assistant/AssistantWrapper";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({ children }) {
         </AssistantWrapper>
         <Footer />
         <ContextMenu />
+        <Analytics />
       </body>
     </html>
   );
