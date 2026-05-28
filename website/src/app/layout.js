@@ -1,0 +1,36 @@
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import ContextMenu from "@/components/ContextMenu";
+import AssistantWrapper from "@/components/Assistant/AssistantWrapper";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata = {
+  title: "VScanX | Verification-Driven Security Analysis",
+  description: "Reproducible security workflows, state evolution tracking, and low-noise vulnerability verification for enterprise-grade applications.",
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en" className="h-full dark" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} min-h-full flex flex-col bg-zinc-950 text-zinc-50 font-sans selection:bg-indigo-500/20 selection:text-indigo-200 antialiased`}>
+        <Navbar />
+        <AssistantWrapper>
+          <main className="flex-1 flex flex-col w-full">{children}</main>
+        </AssistantWrapper>
+        <Footer />
+        <ContextMenu />
+      </body>
+    </html>
+  );
+}
