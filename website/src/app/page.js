@@ -143,6 +143,23 @@ export default function Home() {
         {/* Ambient Top Glow */}
         <div className="absolute top-0 left-1/2 -z-10 h-[360px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-500/5 to-indigo-500/5 blur-[140px]" />
         
+        {/* Product Hunt Featured Badge */}
+        <div className="mb-8 z-10 transition-transform duration-200 hover:scale-[1.02]">
+          <a 
+            href="https://www.producthunt.com/products/vscanx?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-vscanx" 
+            target="_blank" 
+            rel="noopener noreferrer"
+          >
+            <img 
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1158035&theme=dark" 
+              alt="VScanX - Deterministic security scanner with zero false positives | Product Hunt" 
+              width="250" 
+              height="54" 
+              className="w-[250px] h-[54px] object-contain"
+            />
+          </a>
+        </div>
+
         <h1 className="w-full text-5xl sm:text-6xl lg:text-7xl font-sans font-bold tracking-tight text-zinc-50 leading-[1.05]">
           Verification-Driven <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 via-zinc-400 to-zinc-600">
