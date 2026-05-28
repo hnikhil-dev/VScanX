@@ -58,3 +58,9 @@ htmlcov/
 *.tmp
 *.bak
 .cache/
+
+# Ruff
+.ruff_cache/
+
+# VScanX Local State snap runs
+.vscanx_state/

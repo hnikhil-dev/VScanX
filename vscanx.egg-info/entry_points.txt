@@ -1,2 +1,0 @@
-[console_scripts]
-vscanx = vscanx:main
