@@ -389,9 +389,12 @@ def interactive_menu():
             print("\n[+] Starting built-in vulnerable test server on http://127.0.0.1:8080...")
             httpd = None
             try:
-                from http.server import HTTPServer
-                from vulnerable_server import VulnerableHandler
                 import threading
+                import time
+                from http.server import HTTPServer
+
+                from vulnerable_server import VulnerableHandler
+
                 httpd = HTTPServer(("127.0.0.1", 8080), VulnerableHandler)
                 server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
                 server_thread.start()
