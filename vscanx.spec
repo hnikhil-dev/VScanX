@@ -1,0 +1,116 @@
+# -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_submodules
+
+block_cipher = None
+
+hidden_imports = [
+    'core',
+    'core.config',
+    'core.orchestrator',
+    'core.scan_model',
+    'core.schemas',
+    'core.logging_config',
+    'core.console',
+    'core.metrics',
+    'core.utils',
+    'core.request_handler',
+    'core.state.store',
+    'core.state.diff',
+    'core.state.reverify',
+    'core.verify.engine',
+    'core.plugins.manager',
+    'core.events.bus',
+    'core.events.schemas',
+    'core.crawl.crawler',
+    'core.crawl.html_extract',
+    'core.crawl.url_utils',
+    'core.elite.poc_generator',
+    'core.elite.chaining_engine',
+    'core.elite.defensive_variants',
+    'core.elite.oob',
+    'modules.base_module',
+    'modules.web.xss_detector',
+    'modules.web.sqli_detector',
+    'modules.web.header_analyzer',
+    'modules.web.cve_checker',
+    'modules.web.dir_enum',
+    'modules.web.auth_bypass_detector',
+    'modules.web.cmd_injection_detector',
+    'modules.web.crypto_tls_analyzer',
+    'modules.web.error_handling_prober',
+    'modules.web.hpp_detector',
+    'modules.web.idor_detector',
+    'modules.web.js_secret_analyzer',
+    'modules.web.open_redirect_prober',
+    'modules.web.rate_limit_checker',
+    'modules.web.subdomain_recon',
+    'modules.web.tech_fingerprinter',
+    'modules.network.port_scanner',
+    'modules.network.socket_scanner',
+    'modules.web3.access_control_checker',
+    'modules.web3.reentrancy_analyzer',
+    'modules.web3.weak_randomness_detector',
+    'modules.agentic.code_execution_prober',
+    'modules.agentic.data_exfiltration_fuzzer',
+    'modules.agentic.memory_poisoning_fuzzer',
+    'modules.agentic.prompt_injection_fuzzer',
+    'reporting.report_generator',
+    'reporting.export_formats',
+    'reporting.export_validator',
+    'vulnerable_server',
+    'jinja2',
+    'requests',
+    'httpx',
+    'jsonschema',
+]
+hidden_imports += collect_submodules('core')
+hidden_imports += collect_submodules('modules')
+hidden_imports += collect_submodules('reporting')
+
+datas = [
+    ('reporting/templates', 'reporting/templates'),
+    ('vulnerable_server.py', '.'),
+]
+
+a = Analysis(
+    ['vscanx.py'],
+    pathex=['.'],
+    binaries=[],
+    datas=datas,
+    hiddenimports=list(set(hidden_imports)),
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[
+        'matplotlib', 'pandas', 'scipy', 'sklearn', 'torch', 'tensorflow',
+        'cv2', 'PIL', 'streamlit', 'altair', 'pyarrow', 'bokeh'
+    ],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name='VScanX',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=True,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon='website/src/app/favicon.ico',
+)

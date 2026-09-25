@@ -11,6 +11,16 @@ import sys
 import warnings
 from datetime import datetime
 
+# Ensure proper encoding on Windows consoles
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from core.cli_reporter import CLIReporter
 from core.config import (
     DEFAULT_DELAY,
@@ -155,7 +165,7 @@ Examples:
     parser.add_argument(
         "--scan-id2",
         type=str,
-        help="Second scan identifier for --diff (compares --scan-id → --scan-id2).",
+        help="Second scan identifier for --diff (compares --scan-id -> --scan-id2).",
     )
     parser.add_argument(
         "--state-dir",
@@ -300,8 +310,134 @@ Examples:
     return parser
 
 
+def interactive_menu():
+    """Interactive launcher for VScanX when run without CLI arguments."""
+    import webbrowser
+    print_banner()
+    while True:
+        print("\n" + "=" * 64)
+        print("  VScanX - Ethical Vulnerability Scanner (Interactive Mode)")
+        print("=" * 64)
+        print("  [1] Web Application Scan  (SQLi, XSS, IDOR, Headers, CVEs)")
+        print("  [2] Network Port Scan     (Fast socket / port sweep)")
+        print("  [3] Mixed Full Scan       (Web application + Network scan)")
+        print("  [4] Web3 Smart Contract   (Reentrancy, access control, randomness)")
+        print("  [5] Agentic AI Scan       (Prompt injection, data exfiltration)")
+        print("  [6] Demo Local Test Scan  (Starts test server and verifies findings)")
+        print("  [7] Launch Web Dashboard  (Opens documentation dashboard)")
+        print("  [8] View CLI Help / Flags")
+        print("  [0] Exit")
+        print("=" * 64)
+
+        try:
+            choice = input("\nSelect an option [0-8]: ").strip()
+        except (KeyboardInterrupt, EOFError):
+            print("\nExiting VScanX.")
+            break
+
+        if choice == "0":
+            print("\nExiting VScanX. Goodbye!")
+            break
+        elif choice == "1":
+            target = input("\nEnter target URL (e.g., http://example.com/): ").strip()
+            if not target:
+                print("Target URL cannot be empty.")
+                continue
+            profile = input("Select scan profile [quick/normal/full] (default: normal): ").strip() or "normal"
+            fmt = input("Report format(s) [html,json,csv,txt] (default: html,json): ").strip() or "html,json"
+            sys.argv = ["vscanx", "-t", target, "-s", "web", "--profile", profile, "--format", fmt, "--skip-warning"]
+            main()
+            input("\n[+] Scan complete. Press Enter to return to menu...")
+        elif choice == "2":
+            target = input("\nEnter target IP or hostname (e.g., 127.0.0.1): ").strip()
+            if not target:
+                print("Target cannot be empty.")
+                continue
+            ports = input("Port range (e.g., 1-1024 or 80,443) (default: 1-1024): ").strip() or "1-1024"
+            fmt = input("Report format(s) (default: html): ").strip() or "html"
+            sys.argv = ["vscanx", "-t", target, "-s", "network", "-p", ports, "--format", fmt, "--skip-warning"]
+            main()
+            input("\n[+] Scan complete. Press Enter to return to menu...")
+        elif choice == "3":
+            target = input("\nEnter target URL or hostname: ").strip()
+            if not target:
+                print("Target cannot be empty.")
+                continue
+            profile = input("Select scan profile [quick/normal/full] (default: normal): ").strip() or "normal"
+            fmt = input("Report format(s) (default: html,json): ").strip() or "html,json"
+            sys.argv = ["vscanx", "-t", target, "-s", "mixed", "--profile", profile, "--format", fmt, "--skip-warning"]
+            main()
+            input("\n[+] Scan complete. Press Enter to return to menu...")
+        elif choice == "4":
+            rpc = input("\nEnter RPC URL (default: http://127.0.0.1:8545): ").strip() or "http://127.0.0.1:8545"
+            contract = input("Enter Contract Address: ").strip()
+            if not contract:
+                print("Contract address is required.")
+                continue
+            sys.argv = ["vscanx", "-t", rpc, "-s", "web3", "--rpc-url", rpc, "--contract", contract, "--skip-warning"]
+            main()
+            input("\n[+] Scan complete. Press Enter to return to menu...")
+        elif choice == "5":
+            target = input("\nEnter AI endpoint URL: ").strip()
+            if not target:
+                print("Target URL cannot be empty.")
+                continue
+            sys.argv = ["vscanx", "-t", target, "-s", "agentic", "--skip-warning"]
+            main()
+            input("\n[+] Scan complete. Press Enter to return to menu...")
+        elif choice == "6":
+            print("\n[+] Starting built-in vulnerable test server on http://127.0.0.1:8080...")
+            httpd = None
+            try:
+                from http.server import HTTPServer
+                from vulnerable_server import VulnerableHandler
+                import threading
+                httpd = HTTPServer(("127.0.0.1", 8080), VulnerableHandler)
+                server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+                server_thread.start()
+                time.sleep(1)
+                print("[+] Server ready. Running automated vulnerability scan...")
+                sys.argv = [
+                    "vscanx",
+                    "-t", "http://127.0.0.1:8080/search?q=test",
+                    "-s", "web",
+                    "--profile", "quick",
+                    "--format", "html,json",
+                    "--skip-warning",
+                    "-o", "demo_test_scan"
+                ]
+                main()
+            except Exception as e:
+                print(f"[!] Demo scan error: {e}")
+            finally:
+                if httpd:
+                    try:
+                        httpd.shutdown()
+                        httpd.server_close()
+                    except Exception:
+                        pass
+            input("\n[+] Demo scan finished. Press Enter to return to menu...")
+        elif choice == "7":
+            print("\n[+] Opening VScanX Web Documentation...")
+            try:
+                webbrowser.open("https://vscanx.vercel.app")
+            except Exception as e:
+                print(f"Could not open browser: {e}")
+            input("\n[+] Press Enter to return to menu...")
+        elif choice == "8":
+            parser = create_parser()
+            parser.print_help()
+            input("\nPress Enter to return to menu...")
+        else:
+            print("Invalid option. Please choose between 0 and 8.")
+
+
 def main():
     """Main entry point"""
+    if len(sys.argv) == 1:
+        interactive_menu()
+        return
+
     parser = create_parser()
     args = parser.parse_args()
 

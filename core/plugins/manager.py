@@ -20,6 +20,43 @@ class ModuleSpec:
     origin: str
 
 
+KNOWN_BUILTIN_SUBMODULES: Dict[str, List[str]] = {
+    "modules.web": [
+        "auth_bypass_detector",
+        "cmd_injection_detector",
+        "crypto_tls_analyzer",
+        "cve_checker",
+        "dir_enum",
+        "error_handling_prober",
+        "header_analyzer",
+        "hpp_detector",
+        "idor_detector",
+        "js_secret_analyzer",
+        "open_redirect_prober",
+        "rate_limit_checker",
+        "sqli_detector",
+        "subdomain_recon",
+        "tech_fingerprinter",
+        "xss_detector",
+    ],
+    "modules.network": [
+        "port_scanner",
+        "socket_scanner",
+    ],
+    "modules.web3": [
+        "access_control_checker",
+        "reentrancy_analyzer",
+        "weak_randomness_detector",
+    ],
+    "modules.agentic": [
+        "code_execution_prober",
+        "data_exfiltration_fuzzer",
+        "memory_poisoning_fuzzer",
+        "prompt_injection_fuzzer",
+    ],
+}
+
+
 class PluginManager:
     """
     Discovers and loads modules dynamically.
@@ -84,9 +121,12 @@ class PluginManager:
         except Exception:
             return specs
 
-        for _, mod_name, is_pkg in pkgutil.iter_modules(getattr(pkg, "__path__", [])):
-            if is_pkg:
-                continue
+        found = list(pkgutil.iter_modules(getattr(pkg, "__path__", [])))
+        mod_names = [mod_name for _, mod_name, is_pkg in found if not is_pkg]
+        if not mod_names and pkg_name in KNOWN_BUILTIN_SUBMODULES:
+            mod_names = KNOWN_BUILTIN_SUBMODULES[pkg_name]
+
+        for mod_name in mod_names:
             full = f"{pkg_name}.{mod_name}"
             try:
                 m = importlib.import_module(full)
