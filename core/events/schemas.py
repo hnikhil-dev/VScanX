@@ -82,6 +82,10 @@ EVENT_SCHEMAS: Dict[str, Dict[str, List[str]]] = {
         "required": ["module"],
         "optional": [],
     },
+    "module.progress": {
+        "required": ["module", "current", "total"],
+        "optional": ["item", "percentage"],
+    },
 }
 
 

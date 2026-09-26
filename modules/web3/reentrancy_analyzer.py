@@ -19,6 +19,28 @@ def get_web3_client(rpc_url: str):
         return None
 
 
+def extract_evm_opcodes(bytecode_hex: str) -> set:
+    """Parse EVM bytecode into opcode set, skipping PUSH data bytes."""
+    if bytecode_hex.startswith("0x"):
+        bytecode_hex = bytecode_hex[2:]
+    try:
+        raw_bytes = bytes.fromhex(bytecode_hex)
+    except Exception:
+        return set()
+
+    opcodes = set()
+    i = 0
+    while i < len(raw_bytes):
+        op = raw_bytes[i]
+        opcodes.add(op)
+        if 0x60 <= op <= 0x7F:  # PUSH1 .. PUSH32
+            push_len = op - 0x5F
+            i += 1 + push_len
+        else:
+            i += 1
+    return opcodes
+
+
 class ReentrancyAnalyzer(BaseModule):
     def __init__(self, **kwargs):
         super().__init__()
@@ -58,7 +80,15 @@ class ReentrancyAnalyzer(BaseModule):
             return {"module": self.name, "target": target, "findings": self.get_results()}
 
         if not w3.is_connected():
-            return {"module": self.name, "target": target, "findings": []}
+            self.add_result(
+                severity="HIGH",
+                finding="Web3 Provider Connection Failed",
+                details=f"Unable to connect to Ethereum/EVM node at RPC URL: {rpc_url}",
+                remediation="Ensure the RPC endpoint is active and accessible.",
+                confidence="HIGH",
+                verified=False,
+            )
+            return {"module": self.name, "target": target, "findings": self.get_results()}
 
         try:
             checksum_address = w3.to_checksum_address(contract_address)
@@ -86,12 +116,12 @@ class ReentrancyAnalyzer(BaseModule):
         bytecode_hex = bytecode.hex()
         bytecode_len = len(bytecode)
 
-        # 1. EVM Bytecode Pattern Analysis
-        # CALL opcode is 'f1' in hex. DELEGATECALL is 'f4'.
-        # Reentrancy requires calling an untrusted contract, which is represented by a CALL (f1).
-        # We can perform a heuristic match on the density of CALL/DELEGATECALL structures in bytecode.
-        has_call = "f1" in bytecode_hex
-        has_delegatecall = "f4" in bytecode_hex
+        # 1. EVM Bytecode Opcode Disassembly
+        # CALL opcode is 0xf1. DELEGATECALL is 0xf4. STATICCALL is 0xfa.
+        # Parse opcodes safely without counting immediate push data bytes as instructions.
+        opcodes = extract_evm_opcodes(bytecode_hex)
+        has_call = (0xF1 in opcodes)
+        has_delegatecall = (0xF4 in opcodes)
 
         # 2. ABI-based function analysis (if ABI is available)
         abi = None
@@ -114,7 +144,7 @@ class ReentrancyAnalyzer(BaseModule):
 
         # Evaluate risk level based on signals
         if has_call:
-            details = f"Retrieved contract bytecode size: {bytecode_len} bytes. Detected EVM CALL (f1) opcode inside bytecode."
+            details = f"Retrieved contract bytecode size: {bytecode_len} bytes. Detected EVM CALL (0xf1) opcode inside bytecode."
             if vulnerable_candidates:
                 details += f" ABI contains high-risk withdrawal/transfer methods: {', '.join(vulnerable_candidates)}."
 

@@ -17,6 +17,28 @@ def get_web3_client(rpc_url: str):
         return None
 
 
+def extract_evm_opcodes(bytecode_hex: str) -> set:
+    """Parse EVM bytecode into opcode set, skipping PUSH data bytes."""
+    if bytecode_hex.startswith("0x"):
+        bytecode_hex = bytecode_hex[2:]
+    try:
+        raw_bytes = bytes.fromhex(bytecode_hex)
+    except Exception:
+        return set()
+
+    opcodes = set()
+    i = 0
+    while i < len(raw_bytes):
+        op = raw_bytes[i]
+        opcodes.add(op)
+        if 0x60 <= op <= 0x7F:  # PUSH1 .. PUSH32
+            push_len = op - 0x5F
+            i += 1 + push_len
+        else:
+            i += 1
+    return opcodes
+
+
 class WeakRandomnessDetector(BaseModule):
     def __init__(self, **kwargs):
         super().__init__()
@@ -34,33 +56,73 @@ class WeakRandomnessDetector(BaseModule):
         contract_address = kwargs.get("contract") or getattr(self, "contract", None)
 
         if not rpc_url or not contract_address:
-            return {"module": self.name, "target": target, "findings": []}
+            self.add_result(
+                severity="INFO",
+                finding="Web3 Scan Parameters Missing",
+                details="Missing '--rpc-url' or '--contract' flags required for randomness analysis.",
+            )
+            return {"module": self.name, "target": target, "findings": self.get_results()}
 
         w3 = get_web3_client(rpc_url)
-        if not w3 or not w3.is_connected():
-            return {"module": self.name, "target": target, "findings": []}
+        if not w3:
+            self.add_result(
+                severity="HIGH",
+                finding="Web3 Package Not Installed",
+                details="Python 'web3' package is required for Smart Contract scanning. Run: pip install web3",
+                remediation="Install 'web3>=6.0.0' using python's package manager.",
+                confidence="HIGH",
+                verified=False,
+            )
+            return {"module": self.name, "target": target, "findings": self.get_results()}
+
+        if not w3.is_connected():
+            self.add_result(
+                severity="HIGH",
+                finding="Web3 Provider Connection Failed",
+                details=f"Unable to connect to Ethereum/EVM node at RPC URL: {rpc_url}",
+                remediation="Ensure the RPC endpoint is active and accessible.",
+                confidence="HIGH",
+                verified=False,
+            )
+            return {"module": self.name, "target": target, "findings": self.get_results()}
 
         try:
             checksum_address = w3.to_checksum_address(contract_address)
-            bytecode = w3.eth.get_code(checksum_address).hex()
-        except Exception:
-            return {"module": self.name, "target": target, "findings": []}
+            bytecode_bytes = w3.eth.get_code(checksum_address)
+            bytecode = bytecode_bytes.hex()
+        except Exception as e:
+            self.add_result(
+                severity="HIGH",
+                finding="Failed to retrieve contract bytecode",
+                details=f"Error accessing contract address {contract_address}: {e}",
+            )
+            return {"module": self.name, "target": target, "findings": self.get_results()}
 
-        # Predictable sources opcodes:
-        # TIMESTAMP: 42
-        # NUMBER (block): 43
-        # DIFFICULTY (prevrandao): 44
-        # BLOCKHASH: 40
+        if not bytecode or bytecode in ["", "0x", "0x0", "00"]:
+            self.add_result(
+                severity="HIGH",
+                finding="Target is not a Contract Account",
+                details=f"Address {contract_address} has no associated bytecode (EOA account).",
+                confidence="HIGH",
+                verified=True,
+            )
+            return {"module": self.name, "target": target, "findings": self.get_results()}
 
+        # Predictable environmental opcodes:
+        # TIMESTAMP: 0x42
+        # NUMBER (block): 0x43
+        # DIFFICULTY / PREVRANDAO: 0x44
+        # BLOCKHASH: 0x40
+        opcodes = extract_evm_opcodes(bytecode)
         vulnerabilities = []
-        if "42" in bytecode:
-            vulnerabilities.append("block.timestamp (42)")
-        if "43" in bytecode:
-            vulnerabilities.append("block.number (43)")
-        if "44" in bytecode:
-            vulnerabilities.append("block.difficulty/prevrandao (44)")
-        if "40" in bytecode:
-            vulnerabilities.append("blockhash (40)")
+        if 0x42 in opcodes:
+            vulnerabilities.append("block.timestamp (0x42)")
+        if 0x43 in opcodes:
+            vulnerabilities.append("block.number (0x43)")
+        if 0x44 in opcodes:
+            vulnerabilities.append("block.difficulty/prevrandao (0x44)")
+        if 0x40 in opcodes:
+            vulnerabilities.append("blockhash (0x40)")
 
         if vulnerabilities:
             self.add_result(
@@ -80,3 +142,8 @@ class WeakRandomnessDetector(BaseModule):
             )
 
         return {"module": self.name, "target": target, "findings": self.get_results()}
+
+    async def run_async(self, target: str, **kwargs) -> Dict[str, Any]:
+        import asyncio
+
+        return await asyncio.to_thread(self.run, target, **kwargs)

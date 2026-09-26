@@ -46,7 +46,7 @@ ScanModuleSchema = {
         "artifacts": {"type": "object"},
         "findings": {"type": "array"},
     },
-    "additionalProperties": False,
+    "additionalProperties": True,
 }
 
 ScanResultSchema = {

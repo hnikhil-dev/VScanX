@@ -49,16 +49,29 @@ class SocketPortScanner(BaseModule):
         self.open_ports = []
         self.verbose = verbose
 
+        # Normalize port range (supports tuple, list, set, or single int)
+        if isinstance(port_range, (list, set)):
+            ports_to_scan = sorted(list(port_range))
+            range_str = f"{len(ports_to_scan)} ports"
+        elif isinstance(port_range, tuple) and len(port_range) == 2:
+            start_port, end_port = port_range
+            ports_to_scan = list(range(start_port, end_port + 1))
+            range_str = f"{start_port}-{end_port}"
+        elif isinstance(port_range, int):
+            ports_to_scan = [port_range]
+            range_str = str(port_range)
+        else:
+            ports_to_scan = list(range(DEFAULT_PORT_RANGE[0], DEFAULT_PORT_RANGE[1] + 1))
+            range_str = f"{DEFAULT_PORT_RANGE[0]}-{DEFAULT_PORT_RANGE[1]}"
+
         logger.info(
             "socket_scan_start",
             extra={
                 "target": target,
-                "range": f"{port_range[0]}-{port_range[1]}",
+                "range": range_str,
                 "threads": self.max_threads,
             },
         )
-
-        start_port, end_port = port_range
 
         # Resolve hostname to IP if needed
         try:
@@ -81,7 +94,7 @@ class SocketPortScanner(BaseModule):
             }
 
         # Scan ports using thread pool
-        total_ports = end_port - start_port + 1
+        total_ports = len(ports_to_scan)
         scanned = 0
 
         logger = logging.getLogger("vscanx.module.socket_scanner")
@@ -89,7 +102,7 @@ class SocketPortScanner(BaseModule):
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
             # Submit all port scan tasks
             future_to_port = {
-                executor.submit(self._scan_port, target_ip, port): port for port in range(start_port, end_port + 1)
+                executor.submit(self._scan_port, target_ip, port): port for port in ports_to_scan
             }
 
             # Process results as they complete
@@ -129,7 +142,7 @@ class SocketPortScanner(BaseModule):
         self.open_ports.sort()
 
         if not self.open_ports:
-            logger.info("port_scan_none", extra={"range": f"{start_port}-{end_port}"})
+            logger.info("port_scan_none", extra={"range": range_str})
         else:
             logger.info("port_scan_found", extra={"count": len(self.open_ports)})
 

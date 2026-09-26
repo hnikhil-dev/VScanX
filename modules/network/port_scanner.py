@@ -6,13 +6,19 @@ Safe TCP port scanning using Scapy
 import logging
 from typing import Any, Dict
 
-from scapy.all import IP, TCP, conf, sr1
-
 from core.config import DEFAULT_PORT_RANGE, PORT_SCAN_TIMEOUT
 from modules.base_module import BaseModule
 
-# Disable Scapy verbose output
-conf.verb = 0
+
+def _get_scapy():
+    """Lazily import Scapy to avoid startup overhead on Windows."""
+    try:
+        from scapy.all import IP, TCP, conf, sr1
+
+        conf.verb = 0
+        return IP, TCP, sr1
+    except Exception:
+        return None, None, None
 
 
 class PortScanner(BaseModule):
@@ -44,15 +50,43 @@ class PortScanner(BaseModule):
         self.clear_results()
         self.open_ports = []
 
+        IP, TCP, sr1 = _get_scapy()
+        if IP is None:
+            logger.warning("Scapy is not available for PortScanner")
+            self.add_result(
+                severity="INFO",
+                finding="Scapy Not Available",
+                details="Scapy is not installed or raw packet creation is not supported on this platform.",
+            )
+            return {
+                "module": self.name,
+                "target": target,
+                "open_ports": [],
+                "findings": self.get_results(),
+            }
+
+        # Normalize port range (supports tuple, list, set, or single int)
+        if isinstance(port_range, (list, set)):
+            ports_to_scan = sorted(list(port_range))
+            range_str = f"{len(ports_to_scan)} ports"
+        elif isinstance(port_range, tuple) and len(port_range) == 2:
+            start_port, end_port = port_range
+            ports_to_scan = list(range(start_port, end_port + 1))
+            range_str = f"{start_port}-{end_port}"
+        elif isinstance(port_range, int):
+            ports_to_scan = [port_range]
+            range_str = str(port_range)
+        else:
+            ports_to_scan = list(range(DEFAULT_PORT_RANGE[0], DEFAULT_PORT_RANGE[1] + 1))
+            range_str = f"{DEFAULT_PORT_RANGE[0]}-{DEFAULT_PORT_RANGE[1]}"
+
         logger.info(
             "port_scan_start",
-            extra={"target": target, "range": f"{port_range[0]}-{port_range[1]}"},
+            extra={"target": target, "range": range_str},
         )
 
-        start_port, end_port = port_range
-
-        for port in range(start_port, end_port + 1):
-            if self._scan_port(target, port):
+        for port in ports_to_scan:
+            if self._scan_port(target, port, IP, TCP, sr1):
                 self.open_ports.append(port)
                 service = self._identify_service(port)
                 self.add_result(
@@ -63,7 +97,7 @@ class PortScanner(BaseModule):
                 logger.info("port_open", extra={"port": port, "service": service})
 
         if not self.open_ports:
-            logger.info("port_scan_none", extra={"range": f"{start_port}-{end_port}"})
+            logger.info("port_scan_none", extra={"range": range_str})
 
         return {
             "module": self.name,
@@ -72,7 +106,7 @@ class PortScanner(BaseModule):
             "findings": self.get_results(),
         }
 
-    def _scan_port(self, target: str, port: int) -> bool:
+    def _scan_port(self, target: str, port: int, IP=None, TCP=None, sr1=None) -> bool:
         """
         Scan a single port using TCP SYN
 
@@ -83,6 +117,10 @@ class PortScanner(BaseModule):
         Returns:
             True if port is open, False otherwise
         """
+        if IP is None or TCP is None or sr1 is None:
+            IP, TCP, sr1 = _get_scapy()
+            if IP is None:
+                return False
         try:
             # Create SYN packet
             packet = IP(dst=target) / TCP(dport=port, flags="S")

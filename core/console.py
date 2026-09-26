@@ -123,6 +123,78 @@ def print_completed(module_name: str, duration: float, error: str | None = None)
         print(f"{DIM}[+] Completed:{RESET} {module_name} in {duration}s")
 
 
+_SEEN_FINDINGS: set[tuple[str, str, str, str]] = set()
+
+
+def reset_console_state() -> None:
+    """Reset tracked console state (e.g. between scans)."""
+    _SEEN_FINDINGS.clear()
+
+
+class ProgressBar:
+    """
+    Lightweight, dependency-free ANSI progress bar.
+    Supports in-place updates via carriage return in interactive TTY terminals,
+    with clean periodic milestone logging fallback for non-TTY / CI environments.
+    """
+
+    def __init__(self, total: int, prefix: str = "", width: int = 24) -> None:
+        self.total = max(1, total)
+        self.prefix = prefix
+        self.width = width
+        self.current = 0
+        self.last_reported_pct = -1
+        self.is_tty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+        try:
+            "█░".encode(sys.stdout.encoding or "ascii")
+            self.fill_char = "█"
+            self.empty_char = "░"
+        except Exception:
+            self.fill_char = "#"
+            self.empty_char = "-"
+
+    def update(self, current: int, item: str = "") -> None:
+        self.current = min(current, self.total)
+        pct = int((self.current / self.total) * 100)
+
+        max_item_len = 36
+        if len(item) > max_item_len:
+            display_item = item[: max_item_len - 3] + "..."
+        else:
+            display_item = item
+
+        if self.is_tty:
+            filled_len = int(self.width * self.current // self.total)
+            bar = (
+                f"{CYAN}{self.fill_char * filled_len}{RESET}"
+                f"{DIM}{self.empty_char * (self.width - filled_len)}{RESET}"
+            )
+            line = (
+                f"\r{self.prefix} [{bar}] {pct:>3}% ({self.current}/{self.total}) "
+                f"{DIM}{display_item}{RESET}"
+            )
+            sys.stdout.write(f"{line:<90}")
+            sys.stdout.flush()
+        else:
+            # Non-TTY / CI fallback: print only at 25%, 50%, 75%, 100% milestones
+            if pct in (25, 50, 75, 100) and pct != self.last_reported_pct:
+                self.last_reported_pct = pct
+                print(f"{self.prefix} Progress: {pct}% ({self.current}/{self.total}) {display_item}")
+
+    def clear(self) -> None:
+        """Clear the current progress line if in an interactive terminal."""
+        if self.is_tty:
+            sys.stdout.write("\r" + " " * 90 + "\r")
+            sys.stdout.flush()
+
+    def finish(self, message: str = "") -> None:
+        """Complete the progress display and move to a clean line."""
+        if self.is_tty:
+            self.clear()
+            if message:
+                print(f"{self.prefix} {message}")
+
+
 def print_finding(finding: dict) -> None:
     """Print the stylized red vulnerability alert block."""
     severity = str(finding.get("severity", "UNKNOWN")).upper()
@@ -165,6 +237,16 @@ def print_finding(finding: dict) -> None:
     if payload_str == "N/A" and description:
         payload_str = description
 
+    dedup_key = (
+        str(module),
+        str(severity),
+        str(endpoint),
+        str(payload_str),
+    )
+    if dedup_key in _SEEN_FINDINGS:
+        return
+    _SEEN_FINDINGS.add(dedup_key)
+
     # Style block matching Photoshop layout
     print(f"{RED}{BOLD}[!] Vulnerability Found{RESET}")
     print(f"    {BOLD}Type    :{RESET} {severity} {module}")
@@ -186,10 +268,22 @@ def print_summary(summary: dict, report_paths: list[str]) -> None:
     print(f"  {WHITE}INFO:     {by_sev.get('INFO', 0)}{RESET}")
     if summary.get("authenticated"):
         print(f"  {CYAN}Authentication: ENABLED{RESET}")
+    errors = summary.get("errors") or []
+    if errors:
+        print(f"  {RED}{BOLD}ERRORS:   {len(errors)}{RESET}")
     print(f"{CYAN}{BOLD}" + "=" * 60 + f"{RESET}")
+
+    if errors:
+        print(f"\n{RED}{BOLD}[!] Scan Errors Encountered:{RESET}")
+        for err in errors:
+            print(f"  {RED}* {err}{RESET}")
 
     if report_paths:
         print(f"\n{GREEN}{BOLD}[+] Reports Generated:{RESET}")
         for path in report_paths:
             print(f"  * {path}")
-    print(f"\n{GREEN}{BOLD}[+] Scan completed successfully!{RESET}\n")
+
+    if errors:
+        print(f"\n{YELLOW}{BOLD}[!] Scan finished with errors (see above).{RESET}\n")
+    else:
+        print(f"\n{GREEN}{BOLD}[+] Scan completed successfully!{RESET}\n")

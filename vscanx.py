@@ -339,100 +339,199 @@ def interactive_menu():
             print("\nExiting VScanX. Goodbye!")
             break
         elif choice == "1":
-            target = input("\nEnter target URL (e.g., http://example.com/): ").strip()
+            target = input("\nEnter target URL (e.g., http://example.com/ or localhost:8080): ").strip()
             if not target:
-                print("Target URL cannot be empty.")
+                print("[!] Target URL cannot be empty.")
                 continue
+            # Auto-prepend http:// if scheme omitted
+            if not target.startswith(("http://", "https://")):
+                target = f"http://{target}"
+
+            # Auto-normalize IPv4 leading zeros if present
+            try:
+                from urllib.parse import urlparse
+                p = urlparse(target)
+                h = p.hostname or ""
+                octs = h.split(".")
+                if len(octs) == 4 and all(o.isdigit() for o in octs):
+                    if any(len(o) > 1 and o.startswith("0") for o in octs):
+                        norm_h = ".".join(str(int(o)) for o in octs)
+                        target = target.replace(h, norm_h, 1)
+            except Exception:
+                pass
+
             profile = input("Select scan profile [quick/normal/full] (default: normal): ").strip() or "normal"
             fmt = input("Report format(s) [html,json,csv,txt] (default: html,json): ").strip() or "html,json"
-            sys.argv = ["vscanx", "-t", target, "-s", "web", "--profile", profile, "--format", fmt, "--skip-warning"]
+            bearer = input("Bearer Token / API Key (optional, press Enter to skip): ").strip()
+
+            cmd = ["vscanx", "-t", target, "-s", "web", "--profile", profile, "--format", fmt, "--skip-warning"]
+            if bearer:
+                cmd.extend(["--bearer-token", bearer])
+            sys.argv = cmd
             main()
             input("\n[+] Scan complete. Press Enter to return to menu...")
         elif choice == "2":
-            target = input("\nEnter target IP or hostname (e.g., 127.0.0.1): ").strip()
+            target = input("\nEnter target IP or hostname (e.g., 127.0.0.1 or scanme.nmap.org): ").strip()
             if not target:
-                print("Target cannot be empty.")
+                print("[!] Target cannot be empty.")
                 continue
-            ports = input("Port range (e.g., 1-1024 or 80,443) (default: 1-1024): ").strip() or "1-1024"
-            fmt = input("Report format(s) (default: html): ").strip() or "html"
+
+            # Auto-normalize IP with leading zeros
+            parts = target.split(".")
+            if len(parts) == 4 and all(p.isdigit() for p in parts):
+                if any(len(p) > 1 and p.startswith("0") for p in parts):
+                    normalized = ".".join(str(int(p)) for p in parts)
+                    print(f"[*] Note: Normalized IP '{target}' to '{normalized}' (stripped leading zeros)")
+                    target = normalized
+
+            print("\nPort Selection:")
+            print("  [1] Top common ports (21,22,25,53,80,110,143,443,445,3306,3389,5432,8080,8443) [Fastest]")
+            print("  [2] Standard range (1-1024) [Recommended]")
+            print("  [3] Full port sweep (1-65535)")
+            print("  [4] Custom port(s) (e.g., 80,443,8080 or 8000-9000)")
+            p_choice = input("Select port option [1-4] (default: 2): ").strip() or "2"
+
+            if p_choice == "1":
+                ports = "21,22,25,53,80,110,143,443,445,3306,3389,5432,8080,8443"
+            elif p_choice == "3":
+                ports = "1-65535"
+            elif p_choice == "4":
+                ports = input("Enter custom port(s) (e.g., 80,443,8080 or 1-1024): ").strip() or "1-1024"
+            else:
+                ports = "1-1024"
+
+            fmt = input("Report format(s) [html,json,csv,txt] (default: html,json): ").strip() or "html,json"
             sys.argv = ["vscanx", "-t", target, "-s", "network", "-p", ports, "--format", fmt, "--skip-warning"]
             main()
             input("\n[+] Scan complete. Press Enter to return to menu...")
         elif choice == "3":
-            target = input("\nEnter target URL or hostname: ").strip()
+            target = input("\nEnter target URL or hostname (e.g., https://example.com or 127.0.0.1): ").strip()
             if not target:
-                print("Target cannot be empty.")
+                print("[!] Target cannot be empty.")
                 continue
+
+            # Auto-prepend http:// if user entered hostname/domain without scheme
+            if not target.startswith(("http://", "https://")) and not (target.count(".") == 3 and target.replace(".", "").isdigit()):
+                target = f"http://{target}"
+
             profile = input("Select scan profile [quick/normal/full] (default: normal): ").strip() or "normal"
-            fmt = input("Report format(s) (default: html,json): ").strip() or "html,json"
+            fmt = input("Report format(s) [html,json,csv,txt] (default: html,json): ").strip() or "html,json"
             sys.argv = ["vscanx", "-t", target, "-s", "mixed", "--profile", profile, "--format", fmt, "--skip-warning"]
             main()
             input("\n[+] Scan complete. Press Enter to return to menu...")
         elif choice == "4":
-            rpc = input("\nEnter RPC URL (default: http://127.0.0.1:8545): ").strip() or "http://127.0.0.1:8545"
-            contract = input("Enter Contract Address: ").strip()
+            rpc = input("\nEnter EVM RPC URL (default: http://127.0.0.1:8545): ").strip() or "http://127.0.0.1:8545"
+            contract = input("Enter Contract Address (e.g., 0x...): ").strip()
             if not contract:
-                print("Contract address is required.")
+                print("[!] Contract address is required.")
                 continue
-            sys.argv = ["vscanx", "-t", rpc, "-s", "web3", "--rpc-url", rpc, "--contract", contract, "--skip-warning"]
+            abi_path = input("Enter path to Contract ABI JSON file (optional, press Enter to skip): ").strip()
+
+            cmd = ["vscanx", "-t", rpc, "-s", "web3", "--rpc-url", rpc, "--contract", contract, "--skip-warning"]
+            if abi_path:
+                cmd.extend(["--abi", abi_path])
+            sys.argv = cmd
             main()
             input("\n[+] Scan complete. Press Enter to return to menu...")
         elif choice == "5":
-            target = input("\nEnter AI endpoint URL: ").strip()
+            target = input("\nEnter AI / LLM endpoint URL (e.g., http://localhost:11434/api/generate or http://127.0.0.1:8000/v1/chat/completions): ").strip()
             if not target:
-                print("Target URL cannot be empty.")
+                print("[!] Target URL cannot be empty.")
                 continue
-            sys.argv = ["vscanx", "-t", target, "-s", "agentic", "--skip-warning"]
+            if not target.startswith(("http://", "https://")):
+                target = f"http://{target}"
+
+            fmt = input("Report format(s) [html,json,csv,txt] (default: html,json): ").strip() or "html,json"
+            sys.argv = ["vscanx", "-t", target, "-s", "agentic", "--format", fmt, "--skip-warning"]
             main()
             input("\n[+] Scan complete. Press Enter to return to menu...")
         elif choice == "6":
-            print("\n[+] Starting built-in vulnerable test server on http://127.0.0.1:8080...")
+            import os
+            import threading
+            import time
+            from http.server import HTTPServer
+
+            from vulnerable_server import VulnerableHandler
+
+            # Find an available port starting at 8080
             httpd = None
+            bind_port = 8080
+            for candidate in [8080, 8088, 8888, 0]:
+                try:
+                    httpd = HTTPServer(("127.0.0.1", candidate), VulnerableHandler)
+                    bind_port = httpd.server_port
+                    break
+                except OSError:
+                    continue
+
+            if not httpd:
+                print("[!] Error: Could not bind local test server to an available port.")
+                input("\nPress Enter to return to menu...")
+                continue
+
+            print(f"\n[+] Started built-in vulnerable test server on http://127.0.0.1:{bind_port}")
+            server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            server_thread.start()
+            time.sleep(0.5)
+
             try:
-                import threading
-                import time
-                from http.server import HTTPServer
-
-                from vulnerable_server import VulnerableHandler
-
-                httpd = HTTPServer(("127.0.0.1", 8080), VulnerableHandler)
-                server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-                server_thread.start()
-                time.sleep(1)
-                print("[+] Server ready. Running automated vulnerability scan...")
+                print("[+] Running automated vulnerability scan against test server...")
                 sys.argv = [
                     "vscanx",
-                    "-t", "http://127.0.0.1:8080/search?q=test",
+                    "-t", f"http://127.0.0.1:{bind_port}/search?q=test",
                     "-s", "web",
                     "--profile", "quick",
                     "--format", "html,json",
                     "--skip-warning",
-                    "-o", "demo_test_scan"
+                    "-o", "demo_test_scan",
                 ]
                 main()
             except Exception as e:
                 print(f"[!] Demo scan error: {e}")
             finally:
-                if httpd:
-                    try:
-                        httpd.shutdown()
-                        httpd.server_close()
-                    except Exception:
-                        pass
+                try:
+                    httpd.shutdown()
+                    httpd.server_close()
+                except Exception:
+                    pass
+
+            report_file = os.path.abspath(os.path.join("reports", "demo_test_scan.html"))
+            if os.path.exists(report_file):
+                print(f"\n[+] Demo report saved: {report_file}")
             input("\n[+] Demo scan finished. Press Enter to return to menu...")
         elif choice == "7":
-            print("\n[+] Opening VScanX Web Documentation...")
-            try:
-                webbrowser.open("https://vscanx.vercel.app")
-            except Exception as e:
-                print(f"Could not open browser: {e}")
+            import glob
+            import os
+
+            print("\nDashboard & Documentation Options:")
+            print("  [1] Open Online Web Portal & Documentation (https://vscanx.vercel.app)")
+            print("  [2] Open Latest Local HTML Scan Report")
+            dash_choice = input("Select an option [1-2] (default: 1): ").strip() or "1"
+
+            if dash_choice == "2":
+                html_reports = sorted(glob.glob(os.path.join("reports", "*.html")), key=os.path.getmtime, reverse=True)
+                if html_reports:
+                    latest = os.path.abspath(html_reports[0])
+                    print(f"[+] Opening latest report: {latest}")
+                    try:
+                        webbrowser.open(f"file:///{latest.replace(os.sep, '/')}")
+                    except Exception as e:
+                        print(f"[!] Could not open report: {e}")
+                else:
+                    print("[!] No HTML reports found in 'reports/' directory. Run a scan first!")
+            else:
+                print("\n[+] Opening VScanX Web Documentation...")
+                try:
+                    webbrowser.open("https://vscanx.vercel.app")
+                except Exception as e:
+                    print(f"[!] Could not open browser: {e}")
             input("\n[+] Press Enter to return to menu...")
         elif choice == "8":
             parser = create_parser()
             parser.print_help()
             input("\nPress Enter to return to menu...")
         else:
-            print("Invalid option. Please choose between 0 and 8.")
+            print("[!] Invalid option. Please choose between 0 and 8.")
 
 
 def main():
@@ -715,14 +814,16 @@ def main():
     port_range = None
     if args.ports:
         try:
-            if "-" in args.ports:
+            if "," in args.ports:
+                port_range = [int(p.strip()) for p in args.ports.split(",") if p.strip()]
+            elif "-" in args.ports:
                 start, end = map(int, args.ports.split("-"))
                 port_range = (start, end)
             else:
                 port = int(args.ports)
                 port_range = (port, port)
         except ValueError:
-            log.error("Invalid port range: %s", args.ports)
+            log.error("Invalid port specification: %s", args.ports)
             return
 
     # Apply --only module filter
@@ -867,6 +968,7 @@ def main():
     summary["scan_type"] = summary.get("scan_type", args.scan_type).upper()
     summary["start_time"] = summary.get("start_time", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     summary["duration"] = summary.get("duration", results.get("duration", 0))
+    summary["errors"] = results.get("errors", [])
 
     # Skip report generation if requested
     if args.no_report:

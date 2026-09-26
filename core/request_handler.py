@@ -643,6 +643,16 @@ def validate_target(target: str) -> bool:
     if not hostname:
         return False
 
+    # Auto-normalize IPv4 octets with leading zeros (e.g. 192.169.01.01 -> 192.169.1.1)
+    octs = hostname.split(".")
+    if len(octs) == 4 and all(o.isdigit() for o in octs):
+        try:
+            norm_hostname = ".".join(str(int(o)) for o in octs)
+            ipaddress.ip_address(norm_hostname)
+            hostname = norm_hostname
+        except (ValueError, Exception):
+            pass
+
     # Validate IP (v4/v6) or hostname
     try:
         ipaddress.ip_address(hostname)
@@ -657,6 +667,10 @@ def validate_target(target: str) -> bool:
     # Hostname RFC-ish validation: labels 1-63 chars, overall <=253
     if len(hostname) > 253:
         return False
+
+    # RFC 6761 special-use loopback domain
+    if hostname.lower() == "localhost":
+        return True
 
     label_regex = re.compile(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$")
     labels = hostname.split(".")

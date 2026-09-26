@@ -129,6 +129,8 @@ class HeaderAnalyzer(BaseModule):
         )
 
         self._analyze_quality(dict(headers))
+        self._analyze_cors(dict(headers))
+        self._analyze_cookies(response, is_https=target.startswith("https://"))
         return {
             "module": self.name,
             "target": target,
@@ -168,6 +170,8 @@ class HeaderAnalyzer(BaseModule):
                     remediation=self.remediation_map.get(header, "Configure this security header"),
                 )
         self._analyze_quality(dict(headers))
+        self._analyze_cors(dict(headers))
+        self._analyze_cookies(response, is_https=target.startswith("https://"))
         return {
             "module": self.name,
             "target": target,
@@ -175,6 +179,132 @@ class HeaderAnalyzer(BaseModule):
             "missing_headers": missing_headers,
             "findings": self.get_results(),
         }
+
+    def _analyze_cors(self, headers: Dict[str, str]) -> None:
+        """Analyze Cross-Origin Resource Sharing (CORS) configurations."""
+        lower_headers = {str(k).lower(): str(v) for k, v in headers.items()}
+        acao = lower_headers.get("access-control-allow-origin", "").strip()
+        acac = lower_headers.get("access-control-allow-credentials", "").strip().lower()
+
+        if not acao:
+            return
+
+        if acao == "*" and acac == "true":
+            self.add_result(
+                severity="HIGH",
+                finding="Insecure CORS: Wildcard origin with credentials allowed",
+                details=(
+                    "Access-Control-Allow-Origin is set to '*' while Access-Control-Allow-Credentials "
+                    "is 'true'. Modern browsers reject this, but vulnerable clients or custom user-agents "
+                    "may expose authenticated session data to cross-origin attackers."
+                ),
+                remediation="Replace wildcard '*' with specific, trusted origins when credentials are supported.",
+            )
+        elif acao.lower() == "null":
+            self.add_result(
+                severity="MEDIUM",
+                finding="Insecure CORS: Null origin allowed",
+                details=(
+                    "Access-Control-Allow-Origin is set to 'null'. Attackers can trigger requests from "
+                    "sandboxed iframes or data: URIs having origin 'null' to read cross-origin responses."
+                ),
+                remediation="Do not trust 'null' origin; whitelist explicit trusted domains.",
+            )
+        elif acao == "*":
+            self.add_result(
+                severity="INFO",
+                finding="Permissive CORS: Wildcard origin allowed",
+                details="Access-Control-Allow-Origin is '*', allowing any public site to read responses.",
+                remediation="Ensure this endpoint only serves public non-sensitive data, or restrict the allowed origins.",
+            )
+
+    def _analyze_cookies(self, response: Any, is_https: bool = True) -> None:
+        """Inspect Set-Cookie headers for security flags (HttpOnly, Secure, SameSite)."""
+        if not response:
+            return
+
+        raw_cookies: list[str] = []
+        if hasattr(response, "headers"):
+            if hasattr(response.headers, "get_list"):
+                raw_cookies = response.headers.get_list("set-cookie")
+            elif "set-cookie" in response.headers:
+                raw_cookies = [response.headers["set-cookie"]]
+            elif "Set-Cookie" in response.headers:
+                raw_cookies = [response.headers["Set-Cookie"]]
+
+        for cookie_str in raw_cookies:
+            parts = [p.strip() for p in cookie_str.split(";")]
+            if not parts:
+                continue
+            name_val = parts[0].split("=", 1)
+            cookie_name = name_val[0].strip()
+            flags = {p.lower() for p in parts[1:]}
+
+            # 1. HttpOnly check
+            if "httponly" not in flags:
+                sensitive_names = {
+                    "session",
+                    "sessionid",
+                    "sess",
+                    "token",
+                    "auth",
+                    "jwt",
+                    "connect.sid",
+                    "phpsessid",
+                    "jsessionid",
+                    "aspsessionid",
+                }
+                is_sensitive = any(s in cookie_name.lower() for s in sensitive_names)
+                sev = "MEDIUM" if is_sensitive else "LOW"
+                self.add_result(
+                    severity=sev,
+                    finding=f"Cookie missing HttpOnly flag: {cookie_name}",
+                    details=(
+                        f"Cookie '{cookie_name}' lacks HttpOnly directive, making it readable by "
+                        "JavaScript via document.cookie in case of XSS."
+                    ),
+                    remediation=f"Set 'HttpOnly' on '{cookie_name}' to prevent client-side script access.",
+                )
+
+            # 2. Secure flag check
+            if "secure" not in flags and is_https:
+                self.add_result(
+                    severity="MEDIUM",
+                    finding=f"Cookie missing Secure flag: {cookie_name}",
+                    details=(
+                        f"Cookie '{cookie_name}' was transmitted over HTTPS without the Secure flag, "
+                        "risking interception over plaintext HTTP."
+                    ),
+                    remediation=f"Add the 'Secure' directive to cookie '{cookie_name}'.",
+                )
+
+            # 3. SameSite check
+            samesite_val = None
+            for p in parts[1:]:
+                if p.lower().startswith("samesite="):
+                    samesite_val = p.split("=", 1)[1].strip().lower()
+                    break
+
+            if not samesite_val:
+                self.add_result(
+                    severity="LOW",
+                    finding=f"Cookie missing SameSite attribute: {cookie_name}",
+                    details=(
+                        f"Cookie '{cookie_name}' does not specify SameSite (Lax, Strict, or None). "
+                        "Browsers may default to Lax or Lax-by-default."
+                    ),
+                    remediation=f"Explicitly configure 'SameSite=Lax' or 'SameSite=Strict' for cookie '{cookie_name}'.",
+                )
+            elif samesite_val == "none" and "secure" not in flags:
+                self.add_result(
+                    severity="MEDIUM",
+                    finding=f"Insecure SameSite configuration: {cookie_name}",
+                    details=(
+                        f"Cookie '{cookie_name}' uses SameSite=None without the Secure flag, "
+                        "which modern browsers reject and leaves the cookie insecure."
+                    ),
+                    remediation="Cookies with SameSite=None must also include the Secure flag.",
+                )
 
     def _analyze_quality(self, headers: Dict[str, str]) -> None:
         """Deep quality checks for key headers (CSP/HSTS/Permissions-Policy)."""

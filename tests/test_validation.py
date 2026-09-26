@@ -15,6 +15,9 @@ from core.utils import validate_scan_result_schema
         "[2001:db8::1]:443",
         "example.com",
         "sub.domain.example",
+        "localhost",
+        "http://localhost:8080",
+        "192.169.01.01",
     ],
 )
 def test_validate_target_accepts_valid(target):

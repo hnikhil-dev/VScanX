@@ -53,30 +53,35 @@ class MemoryPoisoningFuzzer(BaseModule):
             desc = scene["desc"]
 
             # Try to send injection call (Step 1)
-            for param in param_names:
-                post_data = {param: inj}
+            probes = [(param, {param: inj}, {param: ver}) for param in param_names]
+            probes.append((
+                "messages",
+                {"messages": [{"role": "user", "content": inj}]},
+                {"messages": [{"role": "user", "content": ver}]},
+            ))
+
+            for param, post_data, verify_data in probes:
                 try:
                     # Step 1: Inject memory
                     resp1 = None
                     if hasattr(self.handler, "post"):
                         resp1 = self.handler.post(target, json_data=post_data)
                     else:
-                        import requests
+                        import httpx
 
-                        resp1 = requests.post(target, json=post_data, timeout=5)
+                        resp1 = httpx.post(target, json=post_data, timeout=5.0)
 
                     if not resp1 or resp1.status_code != 200:
                         continue
 
                     # Step 2: Verify memory mutation
-                    verify_data = {param: ver}
                     resp2 = None
                     if hasattr(self.handler, "post"):
                         resp2 = self.handler.post(target, json_data=verify_data)
                     else:
-                        import requests
+                        import httpx
 
-                        resp2 = requests.post(target, json=verify_data, timeout=5)
+                        resp2 = httpx.post(target, json=verify_data, timeout=5.0)
 
                     if resp2 and resp2.status_code == 200:
                         matched = [s for s in sigs if s.lower() in resp2.text.lower()]

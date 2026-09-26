@@ -53,16 +53,18 @@ class CodeExecutionProber(BaseModule):
             desc = payload_info["desc"]
 
             # Try POST
-            for param in param_names:
-                post_data = {param: payload}
+            probes = [(param, {param: payload}) for param in param_names]
+            probes.append(("messages", {"messages": [{"role": "user", "content": payload}]}))
+
+            for param, post_data in probes:
                 try:
                     resp = None
                     if hasattr(self.handler, "post"):
                         resp = self.handler.post(target, json_data=post_data)
                     else:
-                        import requests
+                        import httpx
 
-                        resp = requests.post(target, json=post_data, timeout=5)
+                        resp = httpx.post(target, json=post_data, timeout=5.0)
 
                     if resp and resp.status_code == 200:
                         matched = [s for s in sigs if s.lower() in resp.text.lower()]

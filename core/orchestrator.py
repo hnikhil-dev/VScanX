@@ -159,6 +159,7 @@ class Orchestrator:
             "Rate Limit Checker": "rate_limit_checker",
             "Tech Stack Fingerprinter": "tech_fingerprinter",
             "IDOR Detector": "idor_detector",
+            "IDOR and SSRF Detector": "idor_detector",
             "Authentication Bypass Detector": "auth_bypass_detector",
             "HTTP Parameter Pollution Detector": "hpp_detector",
             "JS Secret Analyzer": "js_secret_analyzer",
@@ -312,6 +313,23 @@ class Orchestrator:
             errors=[],
         )
         self.results = self.scan_result.to_dict()  # keep backward compatibility
+
+        # Auto-normalize IPv4 addresses with leading zeros (e.g. 192.169.01.01 -> 192.169.1.1)
+        raw_host = target
+        if ":" in target and not target.startswith(("http://", "https://", "[")):
+            raw_host = target.split(":", 1)[0]
+        octs = raw_host.split(".")
+        if len(octs) == 4 and all(o.isdigit() for o in octs):
+            if any(len(o) > 1 and o.startswith("0") for o in octs):
+                try:
+                    norm_host = ".".join(str(int(o)) for o in octs)
+                    if ":" in target and not target.startswith(("http://", "https://", "[")):
+                        target = f"{norm_host}:{target.split(':', 1)[1]}"
+                    else:
+                        target = norm_host
+                    logger.info("target_normalized_leading_zeros", extra={"target": target})
+                except Exception:
+                    pass
 
         # Validate target
         if not validate_target(target):
@@ -906,13 +924,41 @@ class Orchestrator:
                     logger.debug("Module started event failed for %s: %s", label, e)
                 runner = self.modules[module_key]
                 module_start = time.time()
+
+                def progress_cb(current: int, total: int, item: str = "") -> None:
+                    try:
+                        self.event_bus.publish(
+                            "module.progress",
+                            {
+                                "module": label,
+                                "current": current,
+                                "total": total,
+                                "item": item,
+                            },
+                        )
+                    except Exception:
+                        pass
+
                 if hasattr(runner, "run_async"):
                     if module_key == "dir_enum":
-                        result = await runner.run_async(target, verbose=self.verbose, recursive=dir_enum_recursive)
+                        result = await runner.run_async(
+                            target,
+                            verbose=self.verbose,
+                            recursive=dir_enum_recursive,
+                            progress_callback=progress_cb,
+                        )
                     else:
                         result = await runner.run_async(target, verbose=self.verbose)
                 else:
-                    result = await asyncio.to_thread(runner.run, target, self.verbose)
+                    if module_key == "dir_enum":
+                        result = await asyncio.to_thread(
+                            runner.run,
+                            target,
+                            self.verbose,
+                            progress_callback=progress_cb,
+                        )
+                    else:
+                        result = await asyncio.to_thread(runner.run, target, self.verbose)
                 module_end = time.time()
                 result.setdefault("module", label)
                 result.setdefault("start_time", datetime.fromtimestamp(module_start).isoformat())
@@ -1235,6 +1281,7 @@ class Orchestrator:
             "scan_type": self.scan_result.scan_type,
             "start_time": self.scan_result.start_time,
             "duration": self.scan_result.duration,
+            "errors": list(self.scan_result.errors),
         }
 
         # Count per-module findings and severity
